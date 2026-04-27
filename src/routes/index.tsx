@@ -4,8 +4,6 @@ import { Hero } from "@/components/mentoark/Hero";
 import { Modules } from "@/components/mentoark/Modules";
 import { TechStack } from "@/components/mentoark/TechStack";
 import { TseData } from "@/components/mentoark/TseData";
-import { Costs } from "@/components/mentoark/Costs";
-import { Pricing } from "@/components/mentoark/Pricing";
 import { Timeline } from "@/components/mentoark/Timeline";
 import { Differentials } from "@/components/mentoark/Differentials";
 import { CTA } from "@/components/mentoark/CTA";
@@ -42,8 +40,6 @@ function Index() {
       <Modules />
       <TechStack />
       <TseData />
-      <Costs />
-      <Pricing />
       <Timeline />
       <Differentials />
       <CTA />

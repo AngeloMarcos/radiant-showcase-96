@@ -113,8 +113,8 @@ export function Hero() {
           <a href="#modulos" className="ma-btn-primary w-full sm:w-auto justify-center">
             Ver a plataforma →
           </a>
-          <a href="#planos" className="ma-btn-secondary w-full sm:w-auto justify-center">
-            Planos e valores
+          <a href="#cta" className="ma-btn-secondary w-full sm:w-auto justify-center">
+            Falar com especialista
           </a>
         </div>
 
