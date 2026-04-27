@@ -1,26 +1,54 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Navbar } from "@/components/mentoark/Navbar";
+import { Hero } from "@/components/mentoark/Hero";
+import { Modules } from "@/components/mentoark/Modules";
+import { TechStack } from "@/components/mentoark/TechStack";
+import { TseData } from "@/components/mentoark/TseData";
+import { Costs } from "@/components/mentoark/Costs";
+import { Pricing } from "@/components/mentoark/Pricing";
+import { Timeline } from "@/components/mentoark/Timeline";
+import { Differentials } from "@/components/mentoark/Differentials";
+import { CTA } from "@/components/mentoark/CTA";
+import { Footer } from "@/components/mentoark/Footer";
+import { BackToTop } from "@/components/mentoark/BackToTop";
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Plataforma de Inteligência Eleitoral — MentoArk" },
+      {
+        name: "description",
+        content:
+          "Sistema completo de consulta eleitoral, gestão de campanha e análise de dados com dados oficiais do TSE e automação via WhatsApp.",
+      },
+      { property: "og:title", content: "Plataforma de Inteligência Eleitoral — MentoArk" },
+      {
+        property: "og:description",
+        content:
+          "Inteligência eleitoral para campanhas que vencem. Dados oficiais do TSE, CRM, mapas de calor e WhatsApp nativo.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. For sites with multiple pages (About, Services, Contact, etc.),
-// create separate route files (about.tsx, services.tsx, contact.tsx) — don't put all pages in this file.
-function PlaceholderIndex() {
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
-  );
-}
-
 function Index() {
-  return <PlaceholderIndex />;
+  return (
+    <main className="mentoark min-h-screen">
+      <Navbar />
+      <Hero />
+      <Modules />
+      <TechStack />
+      <TseData />
+      <Costs />
+      <Pricing />
+      <Timeline />
+      <Differentials />
+      <CTA />
+      <Footer />
+      <BackToTop />
+    </main>
+  );
 }
