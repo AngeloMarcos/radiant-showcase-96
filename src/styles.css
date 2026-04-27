@@ -143,3 +143,133 @@
     color: var(--color-foreground);
   }
 }
+
+/* ============ MENTOARK SCOPED STYLES ============ */
+.mentoark {
+  --ma-bg: #07071a;
+  --ma-bg2: #0d0d2b;
+  --ma-bg3: #11113a;
+  --ma-purple: #7c3aed;
+  --ma-purple-light: #a78bfa;
+  --ma-purple-dim: #4c1d95;
+  --ma-blue: #3b82f6;
+  --ma-border: rgba(124,58,237,0.2);
+  --ma-border2: rgba(124,58,237,0.12);
+  --ma-text: #e2e8f0;
+  --ma-muted: #94a3b8;
+  --ma-muted2: #64748b;
+  background: var(--ma-bg);
+  color: var(--ma-text);
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.mentoark .font-mono { font-family: 'JetBrains Mono', monospace; }
+.mentoark *::selection { background: var(--ma-purple); color: #fff; }
+
+@keyframes ma-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+@keyframes ma-fade-up { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes ma-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+@keyframes ma-shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+@keyframes ma-gradient-x { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+
+.ma-fade-up { animation: ma-fade-up .7s ease forwards; opacity: 0; }
+.ma-pulse-dot { animation: ma-pulse 2s infinite; }
+.ma-float { animation: ma-float 4s ease-in-out infinite; }
+
+.ma-reveal { opacity: 0; transform: translateY(28px); transition: opacity .8s ease, transform .8s ease; }
+.ma-reveal.ma-on { opacity: 1; transform: translateY(0); }
+
+.ma-grid-bg {
+  background-image:
+    linear-gradient(rgba(124,58,237,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124,58,237,.05) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+.ma-gradient-text {
+  background: linear-gradient(135deg, #a78bfa, #60a5fa);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.ma-card {
+  background: var(--ma-bg3);
+  border: 1px solid var(--ma-border2);
+  border-radius: 16px;
+  transition: all .35s ease;
+  position: relative;
+  overflow: hidden;
+}
+.ma-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, transparent, var(--ma-purple), transparent);
+  opacity: 0; transition: opacity .35s ease;
+}
+.ma-card:hover {
+  border-color: rgba(124,58,237,.45);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px rgba(124,58,237,.15);
+}
+.ma-card:hover::before { opacity: 1; }
+
+.ma-btn-primary {
+  background: var(--ma-purple); color: #fff;
+  padding: 14px 28px; border-radius: 10px;
+  font-weight: 700; font-size: 14px;
+  transition: all .3s ease;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.ma-btn-primary:hover {
+  background: #6d28d9;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(124,58,237,.4);
+}
+.ma-btn-secondary {
+  color: var(--ma-text);
+  padding: 14px 28px; border-radius: 10px;
+  font-weight: 600; font-size: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  transition: all .3s ease;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.ma-btn-secondary:hover {
+  border-color: rgba(124,58,237,.5);
+  color: var(--ma-purple-light);
+  background: rgba(124,58,237,.05);
+}
+
+.ma-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(124,58,237,.12);
+  border: 1px solid rgba(124,58,237,.28);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ma-purple-light);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ma-tag {
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 1px; text-transform: uppercase;
+  padding: 4px 10px;
+  background: rgba(124,58,237,.1);
+  border: 1px solid var(--ma-border);
+  border-radius: 6px;
+  color: var(--ma-purple-light);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ma-glow {
+  position: absolute; pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(124,58,237,.18) 0%, rgba(59,130,246,.08) 40%, transparent 70%);
+}
+
+/* Scrollbar */
+.mentoark ::-webkit-scrollbar { width: 10px; }
+.mentoark ::-webkit-scrollbar-track { background: var(--ma-bg); }
+.mentoark ::-webkit-scrollbar-thumb { background: var(--ma-purple-dim); border-radius: 10px; }
+.mentoark ::-webkit-scrollbar-thumb:hover { background: var(--ma-purple); }
