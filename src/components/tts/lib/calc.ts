@@ -287,8 +287,7 @@ export function calcAnual(custoMes: number, precoVendaMes: number, setup: number
 }
 
 // ============= RAMP-UP / Crescimento gradual =============
-// Projeção mês a mês com aumento progressivo de volume. A mão de obra cresce
-// proporcionalmente ao volume (com teto = 100% do moBase).
+// Projeção mês a mês com aumento progressivo de volume e de números ativos.
 
 export interface RampInput {
   meses: number;
@@ -300,9 +299,10 @@ export interface RampInput {
   tokensPorMsg: number;
   modeloGpt: GptModel;
   ferramenta: "elevenlabs" | "playht" | "polly";
-  moBase: number;
-  pctMoInicial: number; // % da MO base no mês 1
-  pctMoFinal: number;   // % da MO base no mês final (proporcional ao volume)
+  // Mão de obra por número (ramp-up de números ativos com plano fixo)
+  numerosInicial: number;
+  numerosFinal: number;
+  moPlanoId: MoPlanoId;
   cambio: number;
   setup: number;
   margem?: number;
@@ -312,7 +312,7 @@ export interface RampMes {
   mes: number;
   disparos: number;
   pctAudio: number;
-  pctMo: number;
+  numeros: number;
   audiosMes: number;
   minutosMes: number;
   custoAudioBrl: number;
