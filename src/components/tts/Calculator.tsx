@@ -2,11 +2,12 @@ import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   calcMinutos, calcElevenLabs, calcPlayht, calcPolly, calcGpt, calcVenda,
-  calcPlanos, calcAnual, calcRampUp, calcEscalaPorNumero,
+  calcPlanos, calcAnual, calcRampUp, calcEscalaPorNumero, calcSensibilidadePorNumero,
   GPT_PRICES, fmtBRL, fmtUSD, fmtNum,
   calcularMaoDeObraPorNumero, calcularPercentualMaoDeObra,
+  aplicarPisoMargem, MARGEM_MINIMA_OBRIGATORIA, MARGEM_PADRAO,
   MO_PLANOS, MO_PRECO_LEGADO_POR_NUMERO,
-  type GptModel, type RampMes, type AudioQuality, type MoPlanoId,
+  type GptModel, type RampMes, type AudioQuality, type MoPlanoId, type PlanoTier,
 } from "./lib/calc";
 import { SliderInput } from "./ui/SliderInput";
 import { StatCard } from "./ui/StatCard";
@@ -181,8 +182,34 @@ export function Calculator() {
     };
   }, [disparosEfetivos, pctAudioEfetivo, duracaoSeg, quantidadeNumeros, moPlanoId, cambio, setup, ferramentaAudio, qualidade, modeloGpt, tokensPorMsg, infraBrlEfetivo]);
 
-  const planos = useMemo(() => calcPlanos(calc.precoVenda, setup), [calc.precoVenda, setup]);
+  // Planos comerciais (Essencial / Profissional / Premium) — calculados a partir
+  // do CUSTO TOTAL (não do preço sugerido), com margens e capacidades distintas.
+  const planos = useMemo(
+    () => calcPlanos(calc.custoTotalMes, setup, disparosEfetivos),
+    [calc.custoTotalMes, setup, disparosEfetivos]
+  );
+  const planoRecomendado = planos.find(p => p.destaque) ?? planos[1];
   const anual = useMemo(() => calcAnual(calc.custoTotalMes, calc.precoVenda, setup), [calc.custoTotalMes, calc.precoVenda, setup]);
+
+  // ===== Sensibilidade por quantidade de números =====
+  const sensibilidade = useMemo(() => calcSensibilidadePorNumero({
+    quantidadesNumeros: [10, 30, 50, 100],
+    disparosPorNumero,
+    audiosPorNumero,
+    duracaoSeg,
+    tokensPorMsg,
+    modeloGpt,
+    qualidade,
+    custoInfraPorNumero,
+    moPlanoId,
+    cambio,
+    setup,
+    margem: MARGEM_PADRAO,
+  }), [disparosPorNumero, audiosPorNumero, duracaoSeg, tokensPorMsg, modeloGpt, qualidade, custoInfraPorNumero, moPlanoId, cambio, setup]);
+
+  // Margem mínima — alerta visual.
+  const margemAbaixoMinima = calc.margemPct / 100 < MARGEM_MINIMA_OBRIGATORIA;
+  const precoMinimoSeguro = aplicarPisoMargem(calc.custoTotalMes, calc.precoVenda);
 
   // ===== Ramp-up (crescimento gradual) =====
   const [rampAtivo, setRampAtivo] = useState(false);
@@ -246,8 +273,13 @@ export function Calculator() {
   if (calc.custoMoBrl > calc.custoApiBrl) {
     alertas.push({ tipo: "info", texto: "Sua mão de obra é o maior custo — considere aumentar o preço de venda." });
   }
-  if (calc.margemPct < 30) {
-    alertas.push({ tipo: "danger", texto: `⚠ Margem atual de ${calc.margemPct.toFixed(1)}% está abaixo de 30% — considere aumentar o preço de venda.` });
+  if (margemAbaixoMinima) {
+    alertas.push({
+      tipo: "danger",
+      texto: `🚨 PROTEJA SUA MARGEM: atual ${calc.margemPct.toFixed(1)}% — abaixo do mínimo obrigatório de ${(MARGEM_MINIMA_OBRIGATORIA * 100).toFixed(0)}%. Preço mínimo seguro: ${fmtBRL(precoMinimoSeguro)}.`,
+    });
+  } else if (calc.margemPct < 40) {
+    alertas.push({ tipo: "warn", texto: `Margem de ${calc.margemPct.toFixed(1)}% está abaixo do alvo de 40%. Considere reposicionar para o plano Profissional (${fmtBRL(planoRecomendado.preco)}).` });
   }
   if (calc.playht.totalUsd > 0 && calc.playht.totalUsd < calc.eleven.totalUsd * 0.3) {
     alertas.push({ tipo: "info", texto: "Play.ht está 3x+ mais barato neste volume — mas avalie a estabilidade da entrega." });
@@ -586,13 +618,30 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
               )}
               <SliderInput label="Duração / áudio"    value={duracaoSeg}    onChange={setDuracaoSeg}    min={5} max={120} suffix="s" />
               <SliderInput label="Tokens / msg texto" value={tokensPorMsg}  onChange={setTokensPorMsg}  min={50} max={2000} step={10} />
-              <SliderInput
-                label="Números WhatsApp ativos"
-                value={quantidadeNumeros}
-                onChange={setQuantidadeNumeros}
-                min={1} max={200} step={1}
-                hint={`MO ${moPlanoSel.nome}: ${fmtBRL(calc.custoMoBrl)}/mês (${calc.pctMoNoTotal.toFixed(1)}% do total)`}
-              />
+              <div className="space-y-2">
+                <SliderInput
+                  label="Números WhatsApp ativos"
+                  value={quantidadeNumeros}
+                  onChange={setQuantidadeNumeros}
+                  min={1} max={200} step={1}
+                  hint={`MO ${moPlanoSel.nome}: ${fmtBRL(calc.custoMoBrl)}/mês (${calc.pctMoNoTotal.toFixed(1)}% do total)`}
+                />
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="text-[9px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mr-1 self-center">
+                    Presets:
+                  </span>
+                  {[10, 30, 50, 100].map(n => (
+                    <button
+                      key={n}
+                      onClick={() => setQuantidadeNumeros(n)}
+                      className={`tts-btn !text-[10px] !py-1 !px-2.5 ${quantidadeNumeros === n ? "tts-btn-active" : ""}`}
+                      title={`Aplicar ${n} números e recalcular tudo`}
+                    >
+                      {n} nº
+                    </button>
+                  ))}
+                </div>
+              </div>
               {modoEscala === "porNumero" && (
                 <NumberField
                   label="Custo infra / número (R$)"
@@ -1115,10 +1164,177 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
           </div>
         </section>
 
-        {/* Proposta */}
+        {/* === Gráficos comerciais === */}
+        <section>
+          <SectionTitle icon={<TrendingUp className="size-4" />} title="Visão comercial" hint="Como seu preço se forma e como escala com o volume" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* A) Composição do preço */}
+            <div className="tts-card p-4 md:p-6">
+              <div className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">
+                Como seu preço final é composto
+              </div>
+              <div style={{ width: "100%", height: 280 }}>
+                <ResponsiveContainer>
+                  <BarChart
+                    data={[{
+                      name: "Preço final",
+                      "Custo técnico (APIs + infra)": calc.custoTecnicoBrl,
+                      "Mão de obra": calc.custoMoBrl,
+                      "Lucro": planoRecomendado.lucroMes,
+                    }]}
+                    layout="vertical"
+                    margin={{ top: 10, right: 20, left: 0, bottom: 10 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1a2235" />
+                    <XAxis type="number" stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 11 }}
+                      tickFormatter={(v) => "R$" + (v >= 1000 ? (v / 1000).toFixed(1) + "k" : v.toFixed(0))} />
+                    <YAxis type="category" dataKey="name" stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 12 }} width={90} />
+                    <Tooltip contentStyle={{ background: "#0d1119", border: "1px solid #1a2235", borderRadius: 8, fontSize: 12, color: "#d8e4f5" }}
+                      formatter={(v: number) => fmtBRL(v)} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="Custo técnico (APIs + infra)" stackId="a" fill={CHART_COLORS.cyan} />
+                    <Bar dataKey="Mão de obra"                  stackId="a" fill={CHART_COLORS.purple} />
+                    <Bar dataKey="Lucro"                        stackId="a" fill={CHART_COLORS.green} radius={[0, 6, 6, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mt-3 text-[11px] font-mono">
+                <div><p className="text-[var(--tts-muted)]">Técnico</p><p className="font-bold">{fmtBRL(calc.custoTecnicoBrl)}</p></div>
+                <div><p className="text-[var(--tts-muted)]">MO</p><p className="font-bold">{fmtBRL(calc.custoMoBrl)}</p></div>
+                <div><p className="text-[var(--tts-muted)]">Preço</p><p className="font-bold" style={{ color: "var(--tts-orange)" }}>{fmtBRL(planoRecomendado.preco)}</p></div>
+              </div>
+            </div>
+
+            {/* C) Comparação dos 3 planos */}
+            <div className="tts-card p-4 md:p-6">
+              <div className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">
+                Comparação dos planos · preço × lucro × capacidade
+              </div>
+              <div style={{ width: "100%", height: 280 }}>
+                <ResponsiveContainer>
+                  <BarChart
+                    data={planos.map(p => ({
+                      nome: p.nome,
+                      "Preço final": p.preco,
+                      "Lucro": p.lucroMes,
+                      "Capacidade (mil)": p.capacidadeDisparos / 1000,
+                    }))}
+                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1a2235" />
+                    <XAxis dataKey="nome" stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 12 }} />
+                    <YAxis yAxisId="left" stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 11 }}
+                      tickFormatter={(v) => "R$" + (v >= 1000 ? (v / 1000).toFixed(1) + "k" : v.toFixed(0))} />
+                    <YAxis yAxisId="right" orientation="right" stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 11 }}
+                      tickFormatter={(v) => v + "k"} />
+                    <Tooltip contentStyle={{ background: "#0d1119", border: "1px solid #1a2235", borderRadius: 8, fontSize: 12, color: "#d8e4f5" }}
+                      formatter={(v: number, name: string) => name === "Capacidade (mil)" ? [fmtNum(v, 1) + "k disparos", name] : [fmtBRL(v), name]} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar yAxisId="left" dataKey="Preço final" fill={CHART_COLORS.orange} radius={[6, 6, 0, 0]} />
+                    <Bar yAxisId="left" dataKey="Lucro"       fill={CHART_COLORS.green}  radius={[6, 6, 0, 0]} />
+                    <Bar yAxisId="right" dataKey="Capacidade (mil)" fill={CHART_COLORS.cyan} radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* B) Linha — escala por quantidade de números */}
+          <div className="tts-card p-4 md:p-6 mt-4">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <div className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono">
+                Escala por quantidade de números (10 · 30 · 50 · 100)
+              </div>
+              <span className="text-[10px] text-[var(--tts-muted)] font-mono">
+                Atual: <span className="text-[var(--tts-orange)] font-bold">{quantidadeNumeros} nº</span>
+              </span>
+            </div>
+            <div style={{ width: "100%", height: 300 }}>
+              <ResponsiveContainer>
+                <LineChart data={sensibilidade} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1a2235" />
+                  <XAxis dataKey="numeros" stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 12 }}
+                    label={{ value: "Quantidade de números", position: "insideBottom", offset: -2, fill: "#94a3b8", fontSize: 11 }} />
+                  <YAxis stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 11 }}
+                    tickFormatter={(v) => "R$" + (v >= 1000 ? (v / 1000).toFixed(1) + "k" : v.toFixed(0))} />
+                  <Tooltip contentStyle={{ background: "#0d1119", border: "1px solid #1a2235", borderRadius: 8, fontSize: 12, color: "#d8e4f5" }}
+                    formatter={(v: number) => fmtBRL(v)}
+                    labelFormatter={(l) => `${l} números`} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Line type="monotone" dataKey="custoTotalBrl" name="Custo total"  stroke={CHART_COLORS.cyan}   strokeWidth={2} dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="precoVendaBrl" name="Preço final"  stroke={CHART_COLORS.orange} strokeWidth={3} dot={{ r: 5 }} />
+                  <Line type="monotone" dataKey="lucroMes"      name="Lucro/mês"    stroke={CHART_COLORS.green}  strokeWidth={2} dot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="overflow-x-auto mt-3">
+              <table className="w-full text-xs font-mono">
+                <thead>
+                  <tr className="text-[10px] uppercase text-[var(--tts-muted)] border-b border-[var(--tts-border)]">
+                    <th className="text-left p-2">Números</th>
+                    <th className="text-right p-2">Disparos/mês</th>
+                    <th className="text-right p-2">Custo total</th>
+                    <th className="text-right p-2">Preço final</th>
+                    <th className="text-right p-2">Lucro/mês</th>
+                    <th className="text-right p-2">Custo/disparo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sensibilidade.map(s => {
+                    const isAtual = s.numeros === quantidadeNumeros;
+                    return (
+                      <tr key={s.numeros} className={`border-b border-[var(--tts-border)]/60 ${isAtual ? "bg-[var(--tts-surface-2)]" : ""}`}>
+                        <td className="p-2">
+                          <span className={isAtual ? "font-bold text-[var(--tts-orange)]" : ""}>{s.numeros} nº</span>
+                          {isAtual && <span className="ml-1 text-[9px]">★ atual</span>}
+                        </td>
+                        <td className="p-2 text-right">{fmtNum(s.disparos)}</td>
+                        <td className="p-2 text-right">{fmtBRL(s.custoTotalBrl)}</td>
+                        <td className="p-2 text-right font-bold" style={{ color: "var(--tts-orange)" }}>{fmtBRL(s.precoVendaBrl)}</td>
+                        <td className="p-2 text-right" style={{ color: "var(--tts-green)" }}>{fmtBRL(s.lucroMes)}</td>
+                        <td className="p-2 text-right text-[var(--tts-muted)]">{fmtBRL(s.custoPorDisparo)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        {/* Por que vale a pena (área comercial) */}
+        <section>
+          <SectionTitle icon={<Sparkles className="size-4" />} title="Por que vale a pena" hint="Resumo de valor para o cliente" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[
+              { t: "Operação 100% automatizada", d: "Áudio + texto disparados sem trabalho manual." },
+              { t: "Padronização total", d: "Mesmo padrão de qualidade em todos os números." },
+              { t: "Escala com múltiplos números", d: `Operamos hoje ${quantidadeNumeros} números em paralelo.` },
+              { t: "Áudio de qualidade superior", d: "ElevenLabs com voice cloning e naturalidade real." },
+              { t: "Suporte de campanha", d: "Equipe acompanha do setup ao fim da operação." },
+              { t: "Previsibilidade de custo", d: "Você sabe exatamente quanto vai pagar todo mês." },
+            ].map(b => (
+              <div key={b.t} className="tts-card p-4">
+                <div className="flex items-start gap-2">
+                  <Check className="size-4 text-[var(--tts-green)] mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-bold">{b.t}</p>
+                    <p className="text-xs text-[var(--tts-muted)] font-mono mt-1">{b.d}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Proposta — 3 planos comerciais com âncora */}
         <section className="tts-print-section">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <SectionTitle icon={<Sparkles className="size-4" />} title={nomeCliente ? `Proposta para ${nomeCliente}` : "Proposta para o cliente"} />
+            <SectionTitle
+              icon={<Sparkles className="size-4" />}
+              title={nomeCliente ? `Proposta para ${nomeCliente}` : "Escolha seu plano"}
+              hint={`${quantidadeNumeros} números · ${fmtNum(disparosEfetivos)} disparos/mês`}
+            />
             <div className="flex gap-2">
               <button onClick={salvarSimulacao} className="tts-btn !text-xs">
                 {salvo ? <><Check className="size-3" /> Salvo!</> : <><Save className="size-3" /> Salvar</>}
@@ -1126,51 +1342,133 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
               <button onClick={exportarPDF} className="tts-btn !text-xs">
                 <Printer className="size-3" /> Exportar PDF
               </button>
-              <button onClick={() => copiarProposta(planos[1])} className="tts-btn !text-xs">
-                {copiado ? <><Check className="size-3" /> Copiado!</> : <><Copy className="size-3" /> Copiar Plano Pro</>}
+              <button onClick={() => copiarProposta(planoRecomendado)} className="tts-btn-primary !text-xs">
+                {copiado ? <><Check className="size-3" /> Copiado!</> : <><Copy className="size-3" /> Copiar Profissional</>}
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {planos.map(p => (
-              <div
-                key={p.nome}
-                className={`tts-card p-6 flex flex-col ${p.destaque ? "!border-[var(--tts-orange)] relative md:-translate-y-2" : ""}`}
-              >
-                {p.destaque && (
-                  <span className="tts-badge tts-badge-orange absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--tts-bg)]">
-                    Recomendado
+
+          {/* Banner âncora — economia entre Essencial → Profissional */}
+          {(() => {
+            const ess = planos[0];
+            const pro = planos[1];
+            const prem = planos[2];
+            const diffProEss = pro.preco - ess.preco;
+            const featsExtras = pro.features.length - ess.features.length;
+            return (
+              <div className="tts-card p-4 mb-4 !border-[var(--tts-orange)]/60 bg-[var(--tts-surface-2)]">
+                <p className="text-sm">
+                  <span className="font-bold" style={{ color: "var(--tts-orange)" }}>
+                    Por apenas {fmtBRL(diffProEss)}/mês a mais que o Essencial
                   </span>
-                )}
-                <h3 className="font-display text-2xl font-bold mb-1">{p.nome}</h3>
-                {nomeCliente && (
-                  <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-1">
-                    Para: <span className="text-[var(--tts-text)]">{nomeCliente}</span>
-                  </p>
-                )}
-                <div className="font-mono text-3xl font-bold my-3" style={{ color: p.destaque ? "var(--tts-orange)" : "var(--tts-text)" }}>
-                  {fmtBRL(p.preco)}
-                  <span className="text-xs text-[var(--tts-muted)] font-normal">/mês</span>
-                </div>
-                <p className="text-xs text-[var(--tts-muted)] font-mono mb-4">Setup: {fmtBRL(p.setup)}</p>
-                <ul className="space-y-2 text-sm flex-1">
-                  {p.features.map(f => (
-                    <li key={f} className="flex items-start gap-2">
-                      <Check className="size-4 text-[var(--tts-green)] mt-0.5 shrink-0" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="grid grid-cols-2 gap-2 mt-4">
-                  <button onClick={() => copiarProposta(p)} className="tts-btn !text-xs">
-                    <Copy className="size-3" /> WhatsApp
-                  </button>
-                  <button onClick={() => baixarPropostaPDF(p)} className="tts-btn !text-xs">
-                    <FileDown className="size-3" /> PDF
-                  </button>
-                </div>
+                  <span className="text-[var(--tts-muted)]">, você leva </span>
+                  <span className="font-bold">{Math.max(2, featsExtras)} benefícios extras</span>
+                  <span className="text-[var(--tts-muted)]"> · áudio profissional · ajustes semanais · capacidade até </span>
+                  <span className="font-bold">{fmtNum(pro.capacidadeDisparos)}</span>
+                  <span className="text-[var(--tts-muted)]"> disparos/mês.</span>
+                </p>
+                <p className="text-[11px] text-[var(--tts-muted)] font-mono mt-1">
+                  Premium custa {fmtBRL(prem.preco - pro.preco)} a mais que o Profissional — escolha quem quer SLA enterprise.
+                </p>
               </div>
-            ))}
+            );
+          })()}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+            {planos.map(p => {
+              const accent = p.destaque ? "var(--tts-orange)" : p.id === "premium" ? "var(--tts-cyan)" : "var(--tts-text)";
+              return (
+                <div
+                  key={p.id}
+                  className={`tts-card p-6 flex flex-col relative transition-all ${
+                    p.destaque
+                      ? "!border-[var(--tts-orange)] tts-card-active md:-translate-y-3 md:scale-[1.03] shadow-[0_20px_60px_-20px_rgba(139,92,246,0.5)] z-10"
+                      : "opacity-95 hover:opacity-100"
+                  }`}
+                >
+                  {p.badge && (
+                    <span
+                      className={`tts-badge absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 ${
+                        p.destaque ? "tts-badge-orange" : "tts-badge-cyan"
+                      } bg-[var(--tts-bg)] border border-current`}
+                    >
+                      ★ {p.badge}
+                    </span>
+                  )}
+                  <div className="flex items-baseline justify-between">
+                    <h3 className="font-display text-2xl font-bold">{p.nome}</h3>
+                    <span className="text-[10px] uppercase font-mono text-[var(--tts-muted)]">{p.prioridade}</span>
+                  </div>
+                  <p className="text-xs text-[var(--tts-muted)] font-mono mb-3">{p.subtitulo}</p>
+
+                  <div className="font-mono text-4xl font-bold mb-1" style={{ color: accent }}>
+                    {fmtBRL(p.preco)}
+                    <span className="text-xs text-[var(--tts-muted)] font-normal">/mês</span>
+                  </div>
+                  <p className="text-[11px] text-[var(--tts-muted)] font-mono mb-3">
+                    Setup único: <span className="text-[var(--tts-text)] font-bold">{fmtBRL(p.setup)}</span>
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-2 mb-3 text-[10px] font-mono">
+                    <div className="p-2 rounded bg-[var(--tts-surface-2)]">
+                      <p className="text-[var(--tts-muted)] uppercase tracking-wider mb-0.5">Capacidade</p>
+                      <p className="font-bold text-[var(--tts-text)]">{fmtNum(p.capacidadeDisparos)} disparos/mês</p>
+                    </div>
+                    <div className="p-2 rounded bg-[var(--tts-surface-2)]">
+                      <p className="text-[var(--tts-muted)] uppercase tracking-wider mb-0.5">Margem</p>
+                      <p className="font-bold" style={{ color: "var(--tts-green)" }}>
+                        {(p.margemReal * 100).toFixed(0)}%
+                      </p>
+                    </div>
+                    <div className="p-2 rounded bg-[var(--tts-surface-2)] col-span-2">
+                      <p className="text-[var(--tts-muted)] uppercase tracking-wider mb-0.5">SLA</p>
+                      <p className="font-bold text-[var(--tts-text)]">{p.sla}</p>
+                    </div>
+                  </div>
+
+                  <ul className="space-y-1.5 text-sm flex-1 mb-4">
+                    {p.features.map(f => (
+                      <li key={f} className="flex items-start gap-2">
+                        <Check className="size-4 mt-0.5 shrink-0" style={{ color: accent }} />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <p className="text-[10px] text-[var(--tts-muted)] font-mono mb-3 italic">
+                    Ideal para: {p.recomendadoPara}
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => copiarProposta(p)} className={p.destaque ? "tts-btn-primary !text-xs" : "tts-btn !text-xs"}>
+                      <Copy className="size-3" /> WhatsApp
+                    </button>
+                    <button onClick={() => baixarPropostaPDF(p)} className="tts-btn !text-xs">
+                      <FileDown className="size-3" /> PDF
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Resumo comercial pronto para venda */}
+          <div className="tts-card p-5 mt-6 !border-[var(--tts-orange)]">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="size-4 text-[var(--tts-orange)]" />
+              <h3 className="font-display font-bold">Resumo comercial</h3>
+              <span className="tts-badge tts-badge-orange ml-auto">Plano recomendado: {planoRecomendado.nome}</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm font-mono">
+              <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Números ativos</p><p className="font-bold text-base">{quantidadeNumeros}</p></div>
+              <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Capacidade/mês</p><p className="font-bold text-base">{fmtNum(planoRecomendado.capacidadeDisparos)} disparos</p></div>
+              <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Minutos áudio</p><p className="font-bold text-base">{fmtNum(calc.minutosMes, 1)} min</p></div>
+              <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Custo operacional</p><p className="font-bold text-base">{fmtBRL(calc.custoTotalMes)}</p></div>
+              <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Preço final</p><p className="font-bold text-base" style={{ color: "var(--tts-orange)" }}>{fmtBRL(planoRecomendado.preco)}</p></div>
+              <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Lucro estimado</p><p className="font-bold text-base" style={{ color: "var(--tts-green)" }}>{fmtBRL(planoRecomendado.lucroMes)}</p></div>
+              <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Margem</p><p className="font-bold text-base" style={{ color: "var(--tts-green)" }}>{(planoRecomendado.margemReal * 100).toFixed(0)}%</p></div>
+              <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Setup único</p><p className="font-bold text-base">{fmtBRL(planoRecomendado.setup)}</p></div>
+            </div>
           </div>
         </section>
 
