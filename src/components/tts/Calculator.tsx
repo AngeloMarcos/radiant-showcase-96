@@ -525,7 +525,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
               {ferramentaAudio === "elevenlabs" && (
                 <div className="mt-3 flex items-center gap-2 flex-wrap">
                   <span className="text-xs text-[var(--tts-muted)] font-mono">Plano ótimo:</span>
-                  <span className="font-mono text-xs">{calc.eleven.plano.nome}</span>
+                  <span className="font-mono text-xs">{calc.eleven.plano.nome} · ${calc.eleven.plano.fixoUsd}/mês</span>
                   <span className={`tts-badge tts-badge-${calc.eleven.status === "ok" ? "ok" : calc.eleven.status === "warn" ? "warn" : "danger"}`}>
                     {calc.eleven.status === "ok" ? "Sem excedente"
                       : calc.eleven.status === "warn" ? `Exc. ${fmtNum(calc.eleven.excedenteMin)}min`
@@ -533,6 +533,31 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                   </span>
                 </div>
               )}
+            </div>
+
+            {/* Qualidade de áudio */}
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-2">Qualidade de áudio</div>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { id: "good" as AudioQuality,         label: "Bom",          hint: "WhatsApp · 128 kbps" },
+                  { id: "professional" as AudioQuality, label: "Profissional", hint: "192 kbps · cloning" },
+                  { id: "studio" as AudioQuality,       label: "Estúdio",      hint: "44.1kHz PCM" },
+                ]).map(q => (
+                  <button
+                    key={q.id}
+                    onClick={() => setQualidade(q.id)}
+                    className={`tts-btn !text-xs flex-col !items-start !py-2 ${qualidade === q.id ? "tts-btn-active" : ""}`}
+                    title={q.hint}
+                  >
+                    <span>{q.label}</span>
+                    <span className="text-[9px] text-[var(--tts-muted)] font-mono normal-case">{q.hint}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-[var(--tts-muted)] font-mono mt-2">
+                Plano recomendado considera apenas planos compatíveis com a qualidade selecionada.
+              </p>
             </div>
             <div>
               <div className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-2">Texto (GPT)</div>
