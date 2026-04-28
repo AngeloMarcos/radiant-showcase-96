@@ -526,15 +526,64 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
               />
             </div>
 
+            {/* Toggle modo manual / proporcional */}
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-2">
+                Modo de escala
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { id: "manual" as const, label: "Manual", hint: "Sliders independentes" },
+                  { id: "porNumero" as const, label: "Proporcional / nº", hint: "Tudo deriva da qtd de números" },
+                ]).map(m => (
+                  <button
+                    key={m.id}
+                    onClick={() => setModoEscala(m.id)}
+                    className={`tts-btn !text-xs flex-col !items-start !py-2 ${modoEscala === m.id ? "tts-btn-active" : ""}`}
+                    title={m.hint}
+                  >
+                    <span>{m.label}</span>
+                    <span className="text-[9px] font-mono normal-case opacity-80">{m.hint}</span>
+                  </button>
+                ))}
+              </div>
+              {modoEscala === "porNumero" && (
+                <p className="text-[11px] text-[var(--tts-muted)] font-mono mt-2 leading-relaxed">
+                  {escala.explicacao}
+                </p>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
-              <SliderInput label="Disparos / mês"     value={totalDisparos} onChange={setTotalDisparos} min={1000} max={500000} step={500} />
-              <SliderInput
-                label="% Áudio"
-                value={pctAudio}
-                onChange={setPctAudio}
-                min={0} max={100} suffix="%"
-                hint={`Texto: ${100 - pctAudio}% · ${fmtNum(textosMes)} msgs`}
-              />
+              {modoEscala === "manual" ? (
+                <>
+                  <SliderInput label="Disparos / mês" value={totalDisparos} onChange={setTotalDisparos} min={1000} max={500000} step={500} />
+                  <SliderInput
+                    label="% Áudio"
+                    value={pctAudio}
+                    onChange={setPctAudio}
+                    min={0} max={100} suffix="%"
+                    hint={`Texto: ${100 - pctAudio}% · ${fmtNum(textosMes)} msgs`}
+                  />
+                </>
+              ) : (
+                <>
+                  <SliderInput
+                    label="Disparos por número"
+                    value={disparosPorNumero}
+                    onChange={setDisparosPorNumero}
+                    min={50} max={5000} step={50}
+                    hint={`Total: ${fmtNum(escala.disparosTotais)} disparos/mês`}
+                  />
+                  <SliderInput
+                    label="Áudios por número"
+                    value={audiosPorNumero}
+                    onChange={setAudiosPorNumero}
+                    min={0} max={Math.max(50, disparosPorNumero)} step={10}
+                    hint={`${escala.pctAudioDerivado.toFixed(0)}% áudio · ${fmtNum(escala.audiosTotais)} áudios · ${fmtNum(escala.textosTotais)} textos`}
+                  />
+                </>
+              )}
               <SliderInput label="Duração / áudio"    value={duracaoSeg}    onChange={setDuracaoSeg}    min={5} max={120} suffix="s" />
               <SliderInput label="Tokens / msg texto" value={tokensPorMsg}  onChange={setTokensPorMsg}  min={50} max={2000} step={10} />
               <SliderInput
@@ -544,6 +593,15 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                 min={1} max={200} step={1}
                 hint={`MO ${moPlanoSel.nome}: ${fmtBRL(calc.custoMoBrl)}/mês (${calc.pctMoNoTotal.toFixed(1)}% do total)`}
               />
+              {modoEscala === "porNumero" && (
+                <NumberField
+                  label="Custo infra / número (R$)"
+                  value={custoInfraPorNumero}
+                  onChange={setCustoInfraPorNumero}
+                  step={5}
+                  prefix="R$"
+                />
+              )}
               <NumberField label="Câmbio USD → BRL" value={cambio} onChange={setCambio} step={0.05} prefix="R$" />
               <NumberField label="Setup (one-time)" value={setup}  onChange={setSetup}  step={100} prefix="R$" />
             </div>
