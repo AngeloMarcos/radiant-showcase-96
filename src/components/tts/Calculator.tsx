@@ -9,7 +9,7 @@ import { SliderInput } from "./ui/SliderInput";
 import { StatCard } from "./ui/StatCard";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid,
-  PieChart, Pie, Cell,
+  PieChart, Pie, Cell, LineChart, Line,
 } from "recharts";
 import {
   Calculator as CalcIcon, Mic, MessageSquare, Wrench, TrendingUp,
