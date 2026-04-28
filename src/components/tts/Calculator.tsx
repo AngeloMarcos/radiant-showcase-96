@@ -7,13 +7,23 @@ import { SliderInput } from "./ui/SliderInput";
 import { StatCard } from "./ui/StatCard";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid,
+  PieChart, Pie, Cell,
 } from "recharts";
 import {
   Calculator as CalcIcon, Mic, MessageSquare, Wrench, TrendingUp,
-  AlertTriangle, Lightbulb, Copy, Check, Sparkles,
+  AlertTriangle, Lightbulb, Copy, Check, Sparkles, Sun, Moon,
+  RotateCcw, Save, Clock, Printer,
 } from "lucide-react";
 
 type AudioTool = "elevenlabs" | "playht" | "polly" | "comparar";
+
+const CHART_COLORS = {
+  orange: "#ff6b2b",
+  cyan: "#00d4ff",
+  purple: "#a78bfa",
+  green: "#3ddc84",
+  gold: "#f5c542",
+} as const;
 
 interface Cenario {
   nome: string;
@@ -29,8 +39,40 @@ const CENARIOS: Cenario[] = [
   { nome: "C4 — Texto Dominante",  descricao: "10% áudio · 30% MO",          pctAudio: 10,  pctMo: 30 },
 ];
 
+interface SimulacaoSalva {
+  id: number;
+  cliente: string;
+  disparos: number;
+  pctAudio: number;
+  duracaoSeg: number;
+  ferramenta: string;
+  modeloGpt: string;
+  moBase: number;
+  pctMo: number;
+  cambio: number;
+  setup: number;
+  custoTotal: number;
+  precoVenda: number;
+  lucro: number;
+  data: string;
+}
+
 export function Calculator() {
+  // ===== Tema =====
+  const [tema, setTema] = useState<"dark" | "light">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("tts_theme") as "dark" | "light") || "dark";
+    }
+    return "dark";
+  });
+  function toggleTema() {
+    const novo = tema === "dark" ? "light" : "dark";
+    setTema(novo);
+    if (typeof window !== "undefined") localStorage.setItem("tts_theme", novo);
+  }
+
   // ===== Estado =====
+  const [nomeCliente, setNomeCliente] = useState("");
   const [totalDisparos, setTotalDisparos] = useState(5000);
   const [pctAudio, setPctAudio] = useState(30);
   const [duracaoSeg, setDuracaoSeg] = useState(10);
@@ -44,6 +86,15 @@ export function Calculator() {
   const [mostrarAnual, setMostrarAnual] = useState(false);
   const [copiado, setCopiado] = useState(false);
 
+  // ===== Histórico =====
+  const [historico, setHistorico] = useState<SimulacaoSalva[]>(() => {
+    if (typeof window === "undefined") return [];
+    try { return JSON.parse(localStorage.getItem("tts_history") || "[]"); }
+    catch { return []; }
+  });
+  const [mostrarHistorico, setMostrarHistorico] = useState(false);
+  const [salvo, setSalvo] = useState(false);
+
   // ===== Cálculos memorizados =====
   const calc = useMemo(() => {
     const { audiosMes, minutosMes } = calcMinutos(totalDisparos, pctAudio, duracaoSeg);
@@ -56,7 +107,7 @@ export function Calculator() {
       ferramentaAudio === "elevenlabs" ? eleven.totalUsd :
       ferramentaAudio === "playht"     ? playht.totalUsd :
       ferramentaAudio === "polly"      ? polly.totalUsd :
-      eleven.totalUsd; // "comparar" usa eleven como base principal
+      eleven.totalUsd;
     const audioLabel =
       ferramentaAudio === "elevenlabs" ? `ElevenLabs ${eleven.plano.nome}` :
       ferramentaAudio === "playht"     ? "Play.ht" :
@@ -83,7 +134,7 @@ export function Calculator() {
   const planos = useMemo(() => calcPlanos(calc.precoVenda, setup), [calc.precoVenda, setup]);
   const anual = useMemo(() => calcAnual(calc.custoTotalMes, calc.precoVenda, setup), [calc.custoTotalMes, calc.precoVenda, setup]);
 
-  // ===== Dados do gráfico comparativo =====
+  // ===== Gráfico de barras =====
   const chartData = useMemo(() => {
     const gptBrl = calc.gpt.totalUsd * cambio;
     return [
@@ -93,8 +144,22 @@ export function Calculator() {
     ];
   }, [calc, cambio]);
 
+  // ===== PieChart =====
+  const pieData = useMemo(() => {
+    const audio = calc.audioUsd * cambio;
+    const texto = calc.gpt.totalUsd * cambio;
+    const mo = calc.custoMoBrl;
+    const total = audio + texto + mo;
+    if (total === 0) return [];
+    return [
+      { name: "Áudio API", value: audio, pct: ((audio / total) * 100).toFixed(1), cor: CHART_COLORS.orange },
+      { name: "Texto (GPT)", value: texto, pct: ((texto / total) * 100).toFixed(1), cor: CHART_COLORS.cyan },
+      { name: "Mão de obra", value: mo, pct: ((mo / total) * 100).toFixed(1), cor: CHART_COLORS.purple },
+    ];
+  }, [calc, cambio]);
+
   // ===== Alertas =====
-  const alertas: { tipo: "warn"|"info"|"danger"; texto: string }[] = [];
+  const alertas: { tipo: "warn" | "info" | "danger"; texto: string }[] = [];
   if (calc.eleven.excedenteMin > 0 && calc.eleven.excedenteMin / calc.eleven.plano.minutosInclusos > 0.30) {
     alertas.push({ tipo: "warn", texto: "Excedente alto no ElevenLabs — considere subir de plano para reduzir custo." });
   }
@@ -102,58 +167,131 @@ export function Calculator() {
     alertas.push({ tipo: "info", texto: "Sua mão de obra é o maior custo — considere aumentar o preço de venda." });
   }
   if (calc.margemPct < 30) {
-    alertas.push({ tipo: "danger", texto: "Margem abaixo de 30% — revise o preço de venda." });
+    alertas.push({ tipo: "danger", texto: `⚠ Margem atual de ${calc.margemPct.toFixed(1)}% está abaixo de 30% — considere aumentar o preço de venda.` });
   }
   if (calc.playht.totalUsd > 0 && calc.playht.totalUsd < calc.eleven.totalUsd * 0.3) {
     alertas.push({ tipo: "info", texto: "Play.ht está 3x+ mais barato neste volume — mas avalie a estabilidade da entrega." });
   }
+  if (calc.eleven.plano.id === "business" && ferramentaAudio === "elevenlabs") {
+    alertas.push({ tipo: "warn", texto: "📊 Volume alto detectado — você está no plano Business do ElevenLabs. Considere negociar um contrato enterprise." });
+  }
+  if (calc.gpt.totalUsd < 0.50 && calc.gpt.textosMes > 0) {
+    alertas.push({ tipo: "info", texto: `💡 Custo do GPT é apenas ${fmtUSD(calc.gpt.totalUsd)}/mês — quase gratuito neste volume.` });
+  }
 
-  // ===== Cenários =====
   function aplicarCenario(c: Cenario) {
     setPctAudio(c.pctAudio);
     setPctMo(c.pctMo);
   }
 
-  // ===== Copiar proposta =====
-  function copiarProposta() {
-    const linhas = [
-      "PROPOSTA — Automação de Disparos com IA (WhatsApp)",
-      "",
-      `Volume: ${fmtNum(totalDisparos)} disparos/mês  |  ${pctAudio}% áudio  ·  ${100 - pctAudio}% texto`,
-      "",
-      ...planos.map(p => [
-        `### ${p.nome}${p.destaque ? "  ⭐ Recomendado" : ""}`,
-        `Mensalidade: ${fmtBRL(p.preco)}`,
-        `Setup: ${fmtBRL(p.setup)}`,
-        ...p.features.map(f => `• ${f}`),
-        "",
-      ].join("\n")),
-    ].join("\n");
-    navigator.clipboard.writeText(linhas).then(() => {
+  // ===== Copiar proposta (por plano) =====
+  function copiarProposta(plano: typeof planos[0]) {
+    const cliente = nomeCliente ? `*Cliente:* ${nomeCliente}\n` : "";
+    const texto = `🚀 *Proposta de Automação WhatsApp — MentoArk*
+${cliente}
+📦 *${plano.nome}${plano.destaque ? " ⭐" : ""}*
+💰 *${fmtBRL(plano.preco)}/mês*
+🔧 Setup: ${fmtBRL(plano.setup)} (único)
+
+*Inclui:*
+${plano.features.map(f => `✅ ${f}`).join("\n")}
+
+📊 *Resumo técnico:*
+• ${fmtNum(calc.audiosMes)} áudios/mês (${duracaoSeg}s cada)
+• ${fmtNum(calc.gpt.textosMes)} mensagens de texto com IA
+• Ferramenta: ${calc.audioLabel}
+• Modelo GPT: ${GPT_PRICES[modeloGpt].label}
+
+📅 *Financeiro:*
+• 1º mês: ${fmtBRL(plano.preco + plano.setup)}
+• A partir do 2º mês: ${fmtBRL(plano.preco)}
+• Projeção anual: ${fmtBRL(plano.preco * 12 + plano.setup)}
+
+🌐 mentoark.com.br`;
+
+    navigator.clipboard.writeText(texto).then(() => {
       setCopiado(true);
-      setTimeout(() => setCopiado(false), 2000);
+      setTimeout(() => setCopiado(false), 2500);
     });
+  }
+
+  // ===== Histórico =====
+  function salvarSimulacao() {
+    const item: SimulacaoSalva = {
+      id: Date.now(),
+      cliente: nomeCliente,
+      disparos: totalDisparos,
+      pctAudio,
+      duracaoSeg,
+      ferramenta: ferramentaAudio,
+      modeloGpt,
+      moBase,
+      pctMo,
+      cambio,
+      setup,
+      custoTotal: calc.custoTotalMes,
+      precoVenda: calc.precoVenda,
+      lucro: calc.lucroMes,
+      data: new Date().toLocaleDateString("pt-BR"),
+    };
+    const novo = [item, ...historico].slice(0, 5);
+    setHistorico(novo);
+    if (typeof window !== "undefined") localStorage.setItem("tts_history", JSON.stringify(novo));
+    setSalvo(true);
+    setTimeout(() => setSalvo(false), 2000);
+  }
+  function carregarSimulacao(s: SimulacaoSalva) {
+    setNomeCliente(s.cliente);
+    setTotalDisparos(s.disparos);
+    setPctAudio(s.pctAudio);
+    setDuracaoSeg(s.duracaoSeg);
+    setFerramentaAudio(s.ferramenta as AudioTool);
+    setModeloGpt(s.modeloGpt as GptModel);
+    setMoBase(s.moBase);
+    setPctMo(s.pctMo);
+    setCambio(s.cambio);
+    setSetup(s.setup);
+  }
+  function excluirSimulacao(id: number) {
+    const novo = historico.filter(s => s.id !== id);
+    setHistorico(novo);
+    if (typeof window !== "undefined") localStorage.setItem("tts_history", JSON.stringify(novo));
+  }
+
+  function resetar() {
+    setTotalDisparos(5000); setPctAudio(30); setDuracaoSeg(10);
+    setMoBase(2500); setPctMo(40); setCambio(5.80); setSetup(4500);
+    setFerramentaAudio("elevenlabs"); setModeloGpt("gpt4o-mini");
+    setTokensPorMsg(200); setNomeCliente("");
+  }
+
+  function exportarPDF() {
+    if (typeof document !== "undefined") {
+      document.title = `Proposta TTS — ${nomeCliente || "Cliente"} — ${new Date().toLocaleDateString("pt-BR")}`;
+      window.print();
+    }
   }
 
   const breakdown = [
     { item: `${calc.audioLabel}`, usd: calc.audioUsd, brl: calc.audioUsd * cambio },
     { item: `${GPT_PRICES[modeloGpt].label} / texto`, usd: calc.gpt.totalUsd, brl: calc.gpt.totalUsd * cambio },
     { item: "n8n (self-hosted)", usd: 0, brl: 0 },
-    { item: `Mão de obra (${pctMo}%)`, usd: null, brl: calc.custoMoBrl },
+    { item: `Mão de obra (${pctMo}%)`, usd: null as number | null, brl: calc.custoMoBrl },
   ];
   const subtotalApiBrl = calc.custoApiBrl;
+  const textosMes = totalDisparos * (1 - pctAudio / 100);
 
   return (
-    <div className="tts-app tts-grid-bg">
+    <div className={`tts-app tts-grid-bg ${tema === "light" ? "tts-light" : ""}`}>
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12 space-y-10">
 
         {/* Header */}
-        <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 border-b border-[var(--tts-border)] pb-6">
+        <header className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 border-b border-[var(--tts-border)] pb-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <CalcIcon className="size-5 text-[var(--tts-orange)]" />
               <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--tts-orange)]">
-                Pricing engine v1.0
+                MentoArk · Pricing engine v2.0
               </span>
             </div>
             <h1 className="font-display text-3xl md:text-5xl font-bold leading-tight">
@@ -164,11 +302,36 @@ export function Calculator() {
               com áudio e texto via WhatsApp. Recálculo em tempo real.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <span className="tts-badge tts-badge-orange">ElevenLabs</span>
-            <span className="tts-badge tts-badge-cyan">Play.ht</span>
-            <span className="tts-badge tts-badge-ok">Polly</span>
-            <span className="tts-badge tts-badge-orange">OpenAI</span>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Mini summary */}
+            <div className="flex items-center gap-3 px-4 py-2 tts-card-elevated">
+              <div className="text-right">
+                <p className="text-[9px] uppercase tracking-wider text-[var(--tts-muted)] font-mono">Custo/mês</p>
+                <p className="font-mono text-sm font-bold">{fmtBRL(calc.custoTotalMes)}</p>
+              </div>
+              <div className="w-px h-8 bg-[var(--tts-border)]" />
+              <div className="text-right">
+                <p className="text-[9px] uppercase tracking-wider text-[var(--tts-muted)] font-mono">Venda</p>
+                <p className="font-mono text-sm font-bold" style={{ color: "var(--tts-orange)" }}>{fmtBRL(calc.precoVenda)}</p>
+              </div>
+              <div className="w-px h-8 bg-[var(--tts-border)]" />
+              <div className="text-right">
+                <p className="text-[9px] uppercase tracking-wider text-[var(--tts-muted)] font-mono">Margem</p>
+                <p className="font-mono text-sm font-bold" style={{
+                  color: calc.margemPct >= 35 ? "var(--tts-green)" : calc.margemPct >= 25 ? "var(--tts-gold)" : "var(--tts-red)",
+                }}>
+                  {calc.margemPct.toFixed(1)}%
+                </p>
+              </div>
+            </div>
+
+            <button onClick={toggleTema} className="tts-btn !text-xs" title="Alternar tema">
+              {tema === "dark" ? <Sun className="size-3" /> : <Moon className="size-3" />}
+            </button>
+            <button onClick={resetar} className="tts-btn !text-xs" title="Resetar para valores padrão">
+              <RotateCcw className="size-3" /> Reset
+            </button>
           </div>
         </header>
 
@@ -196,22 +359,41 @@ export function Calculator() {
 
         {/* Configuração + Ferramentas */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Config base */}
           <div className="tts-card p-6 space-y-6 lg:col-span-2">
             <SectionTitle icon={<Wrench className="size-4" />} title="Configuração base" />
+
+            {/* Nome do cliente */}
+            <div className="space-y-2">
+              <label className="text-xs uppercase tracking-wider text-[var(--tts-muted)] font-mono">
+                Nome do cliente
+              </label>
+              <input
+                type="text"
+                className="tts-input"
+                placeholder="Ex: Acme Corp"
+                value={nomeCliente}
+                onChange={(e) => setNomeCliente(e.target.value)}
+              />
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
               <SliderInput label="Disparos / mês"     value={totalDisparos} onChange={setTotalDisparos} min={1000} max={500000} step={500} />
-              <SliderInput label="% Áudio"             value={pctAudio}      onChange={setPctAudio}      min={0} max={100} suffix="%" hint={`Texto: ${100 - pctAudio}%`} />
+              <SliderInput
+                label="% Áudio"
+                value={pctAudio}
+                onChange={setPctAudio}
+                min={0} max={100} suffix="%"
+                hint={`Texto: ${100 - pctAudio}% · ${fmtNum(textosMes)} msgs`}
+              />
               <SliderInput label="Duração / áudio"    value={duracaoSeg}    onChange={setDuracaoSeg}    min={5} max={120} suffix="s" />
               <SliderInput label="Tokens / msg texto" value={tokensPorMsg}  onChange={setTokensPorMsg}  min={50} max={2000} step={10} />
               <SliderInput label="MO base mensal"      value={moBase}        onChange={setMoBase}        min={0} max={20000} step={100} suffix="R$" />
               <SliderInput label="% MO aplicada"       value={pctMo}         onChange={setPctMo}         min={0} max={100} suffix="%" hint={`= ${fmtBRL(moBase * pctMo / 100)}`} />
-              <NumberField label="Câmbio USD → BRL" value={cambio} onChange={setCambio} step={0.05} />
-              <NumberField label="Setup (one-time)" value={setup}  onChange={setSetup}  step={100} suffix="R$" />
+              <NumberField label="Câmbio USD → BRL" value={cambio} onChange={setCambio} step={0.05} prefix="R$" />
+              <NumberField label="Setup (one-time)" value={setup}  onChange={setSetup}  step={100} prefix="R$" />
             </div>
           </div>
 
-          {/* Ferramentas */}
           <div className="tts-card p-6 space-y-6">
             <SectionTitle icon={<Mic className="size-4" />} title="Ferramentas" />
             <div>
@@ -231,7 +413,7 @@ export function Calculator() {
                 ))}
               </div>
               {ferramentaAudio === "elevenlabs" && (
-                <div className="mt-3 flex items-center gap-2">
+                <div className="mt-3 flex items-center gap-2 flex-wrap">
                   <span className="text-xs text-[var(--tts-muted)] font-mono">Plano ótimo:</span>
                   <span className="font-mono text-xs">{calc.eleven.plano.nome}</span>
                   <span className={`tts-badge tts-badge-${calc.eleven.status === "ok" ? "ok" : calc.eleven.status === "warn" ? "warn" : "danger"}`}>
@@ -288,18 +470,18 @@ export function Calculator() {
           </section>
         )}
 
-        {/* Resultados principais */}
+        {/* Resultados */}
         <section>
           <SectionTitle icon={<TrendingUp className="size-4" />} title="Resultados" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard label="Custo API / mês" value={fmtBRL(calc.custoApiBrl)} sub={fmtUSD(calc.custoApiUsd)} accent="cyan" />
             <StatCard label="Mão de obra / mês" value={fmtBRL(calc.custoMoBrl)} sub={`${pctMo}% de ${fmtBRL(moBase)}`} />
             <StatCard label="Custo total / mês" value={fmtBRL(calc.custoTotalMes)} accent="orange" large />
+            <StatCard label="Custo / disparo" value={totalDisparos > 0 ? fmtBRL(calc.custoTotalMes / totalDisparos) : "R$ 0,00"} sub="custo total ÷ disparos" accent="cyan" />
             <StatCard label="1º mês (com setup)" value={fmtBRL(calc.custoPrimeiroMes)} sub={`+ ${fmtBRL(setup)} setup`} accent="gold" />
             <StatCard label="Preço de venda" value={fmtBRL(calc.precoVenda)} sub="margem 40%" accent="green" large />
             <StatCard label="Lucro / mês" value={fmtBRL(calc.lucroMes)} sub={`${calc.margemPct.toFixed(1)}% de margem`} accent="green" />
-            <StatCard label="Faturamento anual" value={fmtBRL(calc.faturamentoAnual)} sub="12 meses + setup" accent="cyan" />
-            <StatCard label="Lucro anual" value={fmtBRL(calc.lucroMes * 12)} accent="green" />
+            <StatCard label="LTV 24 meses" value={fmtBRL(calc.precoVenda * 24 + setup)} sub={`Anual: ${fmtBRL(calc.faturamentoAnual)}`} accent="cyan" />
           </div>
         </section>
 
@@ -348,39 +530,96 @@ export function Calculator() {
           </div>
         </section>
 
-        {/* Gráfico comparativo */}
+        {/* Gráficos: Bar + Pie */}
         <section>
-          <SectionTitle icon={<TrendingUp className="size-4" />} title="Comparativo de ferramentas (BRL)" hint="Custo total por ferramenta no volume atual" />
-          <div className="tts-card p-4 md:p-6">
-            <div style={{ width: "100%", height: 360 }}>
-              <ResponsiveContainer>
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1a2235" />
-                  <XAxis dataKey="ferramenta" stroke="#4f617a" tick={{ fill: "#d8e4f5", fontSize: 12 }} />
-                  <YAxis stroke="#4f617a" tick={{ fill: "#4f617a", fontSize: 11 }}
-                    tickFormatter={(v) => "R$" + (v >= 1000 ? (v / 1000).toFixed(1) + "k" : v.toFixed(0))} />
-                  <Tooltip
-                    contentStyle={{ background: "#0d1119", border: "1px solid #1a2235", borderRadius: 8, fontSize: 12 }}
-                    formatter={(v: number) => fmtBRL(v)}
-                    cursor={{ fill: "rgba(255,107,43,0.05)" }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="audio" stackId="a" fill="#ff6b2b" name="Áudio" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="texto" stackId="a" fill="#00d4ff" name="Texto (GPT)" />
-                  <Bar dataKey="mo" stackId="a" fill="#a78bfa" name="Mão de obra" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+          <SectionTitle icon={<TrendingUp className="size-4" />} title="Comparativo de ferramentas" hint="Volume atual em BRL" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="tts-card p-4 md:p-6 lg:col-span-2">
+              <div className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">
+                Custo total por ferramenta (empilhado)
+              </div>
+              <div style={{ width: "100%", height: 340 }}>
+                <ResponsiveContainer>
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1a2235" />
+                    <XAxis dataKey="ferramenta" stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 12 }} />
+                    <YAxis stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 11 }}
+                      tickFormatter={(v) => "R$" + (v >= 1000 ? (v / 1000).toFixed(1) + "k" : v.toFixed(0))} />
+                    <Tooltip
+                      contentStyle={{ background: "#0d1119", border: "1px solid #1a2235", borderRadius: 8, fontSize: 12, color: "#d8e4f5" }}
+                      formatter={(v: number) => fmtBRL(v)}
+                      cursor={{ fill: "rgba(255,107,43,0.05)" }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey="audio" stackId="a" fill={CHART_COLORS.orange} name="Áudio" />
+                    <Bar dataKey="texto" stackId="a" fill={CHART_COLORS.cyan} name="Texto (GPT)" />
+                    <Bar dataKey="mo" stackId="a" fill={CHART_COLORS.purple} name="Mão de obra" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="tts-card p-4 md:p-6">
+              <div className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">
+                Composição do custo atual
+              </div>
+              <div style={{ width: "100%", height: 220 }}>
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={85}
+                      paddingAngle={2}
+                    >
+                      {pieData.map((entry, i) => (
+                        <Cell key={i} fill={entry.cor} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ background: "#0d1119", border: "1px solid #1a2235", borderRadius: 8, fontSize: 12, color: "#d8e4f5" }}
+                      formatter={(v: number, name: string) => [fmtBRL(v), name]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-2 mt-2">
+                {pieData.map((d) => (
+                  <div key={d.name} className="flex items-center justify-between text-xs font-mono">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block w-3 h-3 rounded-sm" style={{ background: d.cor }} />
+                      <span>{d.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span>{fmtBRL(d.value)}</span>
+                      <span className="text-[var(--tts-muted)]">{d.pct}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
         {/* Proposta */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <SectionTitle icon={<Sparkles className="size-4" />} title="Proposta para o cliente" />
-            <button onClick={copiarProposta} className="tts-btn !text-xs">
-              {copiado ? <><Check className="size-3" /> Copiado!</> : <><Copy className="size-3" /> Copiar Proposta</>}
-            </button>
+        <section className="tts-print-section">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <SectionTitle icon={<Sparkles className="size-4" />} title={nomeCliente ? `Proposta para ${nomeCliente}` : "Proposta para o cliente"} />
+            <div className="flex gap-2">
+              <button onClick={salvarSimulacao} className="tts-btn !text-xs">
+                {salvo ? <><Check className="size-3" /> Salvo!</> : <><Save className="size-3" /> Salvar</>}
+              </button>
+              <button onClick={exportarPDF} className="tts-btn !text-xs">
+                <Printer className="size-3" /> Exportar PDF
+              </button>
+              <button onClick={() => copiarProposta(planos[1])} className="tts-btn !text-xs">
+                {copiado ? <><Check className="size-3" /> Copiado!</> : <><Copy className="size-3" /> Copiar Plano Pro</>}
+              </button>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {planos.map(p => (
@@ -394,6 +633,11 @@ export function Calculator() {
                   </span>
                 )}
                 <h3 className="font-display text-2xl font-bold mb-1">{p.nome}</h3>
+                {nomeCliente && (
+                  <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-1">
+                    Para: <span className="text-[var(--tts-text)]">{nomeCliente}</span>
+                  </p>
+                )}
                 <div className="font-mono text-3xl font-bold my-3" style={{ color: p.destaque ? "var(--tts-orange)" : "var(--tts-text)" }}>
                   {fmtBRL(p.preco)}
                   <span className="text-xs text-[var(--tts-muted)] font-normal">/mês</span>
@@ -407,10 +651,66 @@ export function Calculator() {
                     </li>
                   ))}
                 </ul>
+                <button onClick={() => copiarProposta(p)} className="tts-btn !text-xs w-full mt-4">
+                  <Copy className="size-3" /> Copiar para WhatsApp
+                </button>
               </div>
             ))}
           </div>
         </section>
+
+        {/* Histórico */}
+        {historico.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <SectionTitle icon={<Clock className="size-4" />} title="Histórico de simulações" />
+              <button onClick={() => setMostrarHistorico(v => !v)} className="tts-btn !text-xs">
+                {mostrarHistorico ? "Ocultar" : `Ver ${historico.length} simulações`}
+              </button>
+            </div>
+            {mostrarHistorico && (
+              <div className="tts-card overflow-x-auto tts-fade-in">
+                <table className="w-full text-xs font-mono">
+                  <thead>
+                    <tr className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] border-b border-[var(--tts-border)]">
+                      <th className="text-left p-3">Data</th>
+                      <th className="text-left p-3">Cliente</th>
+                      <th className="text-right p-3">Disparos</th>
+                      <th className="text-right p-3">Custo</th>
+                      <th className="text-right p-3">Venda</th>
+                      <th className="text-right p-3">Lucro</th>
+                      <th className="text-right p-3">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historico.map(s => (
+                      <tr key={s.id} className="border-b border-[var(--tts-border)]/60">
+                        <td className="p-3">{s.data}</td>
+                        <td className="p-3">{s.cliente || <span className="text-[var(--tts-muted)]">—</span>}</td>
+                        <td className="p-3 text-right">{fmtNum(s.disparos)}</td>
+                        <td className="p-3 text-right">{fmtBRL(s.custoTotal)}</td>
+                        <td className="p-3 text-right">{fmtBRL(s.precoVenda)}</td>
+                        <td className="p-3 text-right" style={{ color: "var(--tts-green)" }}>{fmtBRL(s.lucro)}</td>
+                        <td className="p-3 text-right">
+                          <div className="flex gap-1 justify-end">
+                            <button
+                              onClick={() => carregarSimulacao(s)}
+                              className="tts-btn !text-[10px] !px-2 !py-1"
+                            >Carregar</button>
+                            <button
+                              onClick={() => excluirSimulacao(s.id)}
+                              className="tts-btn !text-[10px] !px-2 !py-1 hover:!border-[var(--tts-red)] hover:!text-[var(--tts-red)]"
+                            >🗑</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Tabela anual */}
         <section>
@@ -449,7 +749,7 @@ export function Calculator() {
         </section>
 
         <footer className="pt-8 border-t border-[var(--tts-border)] text-xs text-[var(--tts-muted)] font-mono text-center">
-          TTS Cost Calculator · cálculo client-side · valores referenciais sujeitos a alteração de preços nas APIs
+          TTS Cost Calculator · MentoArk · cálculo client-side · valores referenciais sujeitos a alteração de preços nas APIs
         </footer>
       </div>
     </div>
@@ -468,24 +768,30 @@ function SectionTitle({ icon, title, hint }: { icon: React.ReactNode; title: str
   );
 }
 
-function NumberField({ label, value, onChange, step = 1, suffix }: {
-  label: string; value: number; onChange: (v: number) => void; step?: number; suffix?: string;
+function NumberField({ label, value, onChange, step = 1, prefix, suffix }: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  step?: number;
+  prefix?: string;
+  suffix?: string;
 }) {
   return (
     <div className="space-y-2">
       <label className="text-xs uppercase tracking-wider text-[var(--tts-muted)] font-mono">{label}</label>
       <div className="flex items-center gap-2">
-        {suffix && <span className="text-xs text-[var(--tts-muted)] font-mono">{suffix}</span>}
+        {prefix && <span className="text-xs text-[var(--tts-muted)] font-mono">{prefix}</span>}
         <input
           type="number"
           className="tts-input"
           value={value}
           step={step}
           onChange={(e) => {
-            const v = Number(e.target.value);
-            if (!Number.isNaN(v)) onChange(v);
+            const v = parseFloat(e.target.value);
+            if (!Number.isNaN(v) && v >= 0) onChange(v);
           }}
         />
+        {suffix && <span className="text-xs text-[var(--tts-muted)] font-mono">{suffix}</span>}
       </div>
     </div>
   );
