@@ -511,7 +511,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                 value={quantidadeNumeros}
                 onChange={setQuantidadeNumeros}
                 min={1} max={200} step={1}
-                hint={`MO ${moPlanoSel.nome}: ${fmtBRL(calc.custoMoBrl)}/mês (${pctNumber(calc.pctMoNoTotal)}% do total)`}
+                hint={`MO ${moPlanoSel.nome}: ${fmtBRL(calc.custoMoBrl)}/mês (${calc.pctMoNoTotal.toFixed(1)}% do total)`}
               />
               <NumberField label="Câmbio USD → BRL" value={cambio} onChange={setCambio} step={0.05} prefix="R$" />
               <NumberField label="Setup (one-time)" value={setup}  onChange={setSetup}  step={100} prefix="R$" />
