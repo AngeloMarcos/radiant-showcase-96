@@ -96,8 +96,10 @@ export const MO_PLANOS: Record<MoPlanoId, MoPlano> = {
 export function calcularMaoDeObraPorNumero(
   quantidadeNumeros: number,
   plano: MoPlanoId,
+  precoOverride?: number,
 ): number {
-  const preco = Math.max(MO_PLANOS[plano].precoPorNumero, MO_PRECO_MINIMO_POR_NUMERO);
+  const base = precoOverride != null ? precoOverride : MO_PLANOS[plano].precoPorNumero;
+  const preco = Math.max(base, MO_PRECO_MINIMO_POR_NUMERO);
   return Math.max(0, quantidadeNumeros) * preco;
 }
 
@@ -513,6 +515,7 @@ export interface SensibilidadeInput {
   qualidade: AudioQuality;
   custoInfraPorNumero: number;
   moPlanoId: MoPlanoId;
+  moPrecoOverride?: number;
   cambio: number;
   setup: number;
   margem?: number;
@@ -543,7 +546,7 @@ export function calcSensibilidadePorNumero(i: SensibilidadeInput): Sensibilidade
     const eleven = calcElevenLabs(escala.minutosTotaisAudio, i.qualidade);
     const gpt = calcGpt(escala.disparosTotais, escala.pctAudioDerivado, i.tokensPorMsg, i.modeloGpt);
     const custoApiBrl = (eleven.totalUsd + gpt.totalUsd) * i.cambio;
-    const custoMo = calcularMaoDeObraPorNumero(q, i.moPlanoId);
+    const custoMo = calcularMaoDeObraPorNumero(q, i.moPlanoId, i.moPrecoOverride);
     const custoTotal = custoApiBrl + escala.custoInfraTotalBrl + custoMo;
     const venda = calcVenda(custoTotal, i.setup, margem);
     const precoFinal = aplicarPisoMargem(custoTotal, venda.precoVenda);
@@ -595,6 +598,7 @@ export interface RampInput {
   numerosInicial: number;
   numerosFinal: number;
   moPlanoId: MoPlanoId;
+  moPrecoOverride?: number;
   cambio: number;
   setup: number;
   margem?: number;
@@ -651,7 +655,7 @@ export function calcRampUp(input: RampInput): RampMes[] {
     const custoAudioBrl = audioUsd * input.cambio;
     const custoTextoBrl = gpt.totalUsd * input.cambio;
     const custoApiBrl = custoAudioBrl + custoTextoBrl;
-    const custoMoBrl = calcularMaoDeObraPorNumero(numeros, input.moPlanoId);
+    const custoMoBrl = calcularMaoDeObraPorNumero(numeros, input.moPlanoId, input.moPrecoOverride);
     const custoTotal = custoApiBrl + custoMoBrl;
     const venda = calcVenda(custoTotal, input.setup, margem);
 
