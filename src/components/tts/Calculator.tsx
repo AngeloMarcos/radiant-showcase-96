@@ -709,9 +709,14 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                     </li>
                   ))}
                 </ul>
-                <button onClick={() => copiarProposta(p)} className="tts-btn !text-xs w-full mt-4">
-                  <Copy className="size-3" /> Copiar para WhatsApp
-                </button>
+                <div className="grid grid-cols-2 gap-2 mt-4">
+                  <button onClick={() => copiarProposta(p)} className="tts-btn !text-xs">
+                    <Copy className="size-3" /> WhatsApp
+                  </button>
+                  <button onClick={() => baixarPropostaPDF(p)} className="tts-btn !text-xs">
+                    <FileDown className="size-3" /> PDF
+                  </button>
+                </div>
               </div>
             ))}
           </div>
