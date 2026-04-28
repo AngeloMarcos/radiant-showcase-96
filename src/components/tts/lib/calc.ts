@@ -515,6 +515,7 @@ export interface SensibilidadeInput {
   qualidade: AudioQuality;
   custoInfraPorNumero: number;
   moPlanoId: MoPlanoId;
+  moPrecoOverride?: number;
   cambio: number;
   setup: number;
   margem?: number;
