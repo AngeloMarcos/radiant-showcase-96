@@ -12,8 +12,9 @@ import {
 import {
   Calculator as CalcIcon, Mic, MessageSquare, Wrench, TrendingUp,
   AlertTriangle, Lightbulb, Copy, Check, Sparkles, Sun, Moon,
-  RotateCcw, Save, Clock, Printer,
+  RotateCcw, Save, Clock, Printer, FileDown,
 } from "lucide-react";
+import { jsPDF } from "jspdf";
 
 type AudioTool = "elevenlabs" | "playht" | "polly" | "comparar";
 
@@ -184,10 +185,10 @@ export function Calculator() {
     setPctMo(c.pctMo);
   }
 
-  // ===== Copiar proposta (por plano) =====
-  function copiarProposta(plano: typeof planos[0]) {
+  // ===== Texto da proposta (compartilhado entre WhatsApp e PDF) =====
+  function gerarTextoProposta(plano: typeof planos[0]) {
     const cliente = nomeCliente ? `*Cliente:* ${nomeCliente}\n` : "";
-    const texto = `🚀 *Proposta de Automação WhatsApp — MentoArk*
+    return `🚀 *Proposta de Automação WhatsApp — MentoArk*
 ${cliente}
 📦 *${plano.nome}${plano.destaque ? " ⭐" : ""}*
 💰 *${fmtBRL(plano.preco)}/mês*
@@ -208,12 +209,69 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
 • Projeção anual: ${fmtBRL(plano.preco * 12 + plano.setup)}
 
 🌐 mentoark.com.br`;
+  }
 
-    navigator.clipboard.writeText(texto).then(() => {
+  // ===== Copiar proposta (WhatsApp) =====
+  function copiarProposta(plano: typeof planos[0]) {
+    navigator.clipboard.writeText(gerarTextoProposta(plano)).then(() => {
       setCopiado(true);
       setTimeout(() => setCopiado(false), 2500);
     });
   }
+
+  // ===== Baixar proposta como PDF =====
+  function baixarPropostaPDF(plano: typeof planos[0]) {
+    const texto = gerarTextoProposta(plano);
+    // Remove asteriscos de negrito do markdown WhatsApp para o PDF
+    const limpo = texto.replace(/\*/g, "");
+
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const marginX = 18;
+    const marginY = 20;
+    const maxW = pageW - marginX * 2;
+
+    // Cabeçalho
+    doc.setFillColor(234, 90, 27); // laranja MentoArk
+    doc.rect(0, 0, pageW, 14, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("MentoArk · Proposta Comercial", marginX, 9);
+
+    // Corpo
+    doc.setTextColor(15, 23, 42);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+
+    const linhas = doc.splitTextToSize(limpo, maxW);
+    let y = marginY + 4;
+    const lineH = 5.5;
+
+    for (const linha of linhas) {
+      if (y > pageH - marginY) {
+        doc.addPage();
+        y = marginY;
+      }
+      doc.text(linha, marginX, y);
+      y += lineH;
+    }
+
+    // Rodapé
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(
+      `Gerado em ${new Date().toLocaleDateString("pt-BR")} · mentoark.com.br`,
+      marginX,
+      pageH - 10
+    );
+
+    const slug = (nomeCliente || "cliente").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const planoSlug = plano.nome.toLowerCase().replace(/\s+/g, "-");
+    doc.save(`proposta-${slug}-${planoSlug}.pdf`);
+  }
+
 
   // ===== Histórico =====
   function salvarSimulacao() {
@@ -651,9 +709,14 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                     </li>
                   ))}
                 </ul>
-                <button onClick={() => copiarProposta(p)} className="tts-btn !text-xs w-full mt-4">
-                  <Copy className="size-3" /> Copiar para WhatsApp
-                </button>
+                <div className="grid grid-cols-2 gap-2 mt-4">
+                  <button onClick={() => copiarProposta(p)} className="tts-btn !text-xs">
+                    <Copy className="size-3" /> WhatsApp
+                  </button>
+                  <button onClick={() => baixarPropostaPDF(p)} className="tts-btn !text-xs">
+                    <FileDown className="size-3" /> PDF
+                  </button>
+                </div>
               </div>
             ))}
           </div>
