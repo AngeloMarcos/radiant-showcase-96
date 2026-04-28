@@ -1386,14 +1386,14 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
           </div>
 
           {/* Ajuste manual de R$/número (override do plano selecionado) */}
-          <div className="tts-card p-5 mb-4">
+          <div className={`tts-card p-5 mb-4 ${moCustomAtivo ? "!border-[var(--tts-orange)]" : ""}`}>
             <div className="flex items-start justify-between gap-4 mb-3">
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono">
-                  Ajuste manual · valor por número
+                <p className="text-xs uppercase tracking-wider font-mono font-bold" style={{ color: "var(--tts-orange)" }}>
+                  ✏️ Ajuste manual · R$ por número
                 </p>
                 <p className="text-xs text-[var(--tts-muted)] font-mono mt-1">
-                  Sobrescreve o R$/número do plano selecionado. Mínimo: {fmtBRL(150)} (piso operacional).
+                  Mexa no slider abaixo ou clique em um preset para sobrescrever o R$/número do plano. Mínimo: {fmtBRL(150)}.
                 </p>
               </div>
               <label className="flex items-center gap-2 text-xs font-mono cursor-pointer shrink-0">
@@ -1403,12 +1403,12 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                   onChange={(e) => setMoCustomAtivo(e.target.checked)}
                   className="size-4 accent-[var(--tts-orange)]"
                 />
-                <span>{moCustomAtivo ? "Personalizado ativo" : "Usar plano fixo"}</span>
+                <span>{moCustomAtivo ? "Personalizado ATIVO" : "Aplicar valor"}</span>
               </label>
             </div>
 
-            {moCustomAtivo && (
-              <div className="space-y-3">
+            {/* Sempre visível — interagir aplica automaticamente */}
+            <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <input
                     type="range"
@@ -1416,7 +1416,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                     max={500}
                     step={5}
                     value={moPrecoCustom}
-                    onChange={(e) => setMoPrecoCustom(Number(e.target.value))}
+                    onChange={(e) => { setMoPrecoCustom(Number(e.target.value)); if (!moCustomAtivo) setMoCustomAtivo(true); }}
                     className="flex-1 accent-[var(--tts-orange)]"
                   />
                   <div className="flex items-center gap-1 font-mono text-sm">
@@ -1427,7 +1427,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                       max={2000}
                       step={5}
                       value={moPrecoCustom}
-                      onChange={(e) => setMoPrecoCustom(Math.max(150, Number(e.target.value) || 150))}
+                      onChange={(e) => { setMoPrecoCustom(Math.max(150, Number(e.target.value) || 150)); if (!moCustomAtivo) setMoCustomAtivo(true); }}
                       className="w-20 bg-transparent border border-[var(--tts-border)] rounded px-2 py-1 text-right font-bold"
                       style={{ color: "var(--tts-orange)" }}
                     />
@@ -1480,7 +1480,6 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                   ))}
                 </div>
               </div>
-            )}
           </div>
 
           {/* Comparativo: legado vs novo */}
