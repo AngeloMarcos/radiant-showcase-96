@@ -767,6 +767,204 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
           </div>
         </section>
 
+        {/* ============================================================== */}
+        {/* RETORNO ESTIMADO DA CAMPANHA — funil de conversão               */}
+        {/* ============================================================== */}
+        <section className="space-y-4">
+          <SectionTitle
+            icon={<Target className="size-4" />}
+            title="Retorno estimado da campanha"
+            hint={`Funil sobre ${fmtNum(disparosEfetivos)} disparos/mês · cenário ${CENARIOS_FUNIL[funilCenarioId].nome}`}
+          />
+
+          {/* Seletor de cenário */}
+          <div className="grid grid-cols-3 gap-3">
+            {(Object.keys(CENARIOS_FUNIL) as CenarioFunilId[]).map(id => {
+              const c = CENARIOS_FUNIL[id];
+              const isSel = id === funilCenarioId;
+              const r = funilCenarios[id];
+              return (
+                <button
+                  key={id}
+                  onClick={() => aplicarCenarioFunil(id)}
+                  className={`tts-card p-4 text-left transition-all hover:-translate-y-0.5 ${
+                    isSel ? "!border-[var(--tts-orange)] tts-card-active" : ""
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-display font-bold text-sm">{c.nome}</h3>
+                    {isSel && <span className="tts-badge tts-badge-orange text-[9px]">ATIVO</span>}
+                  </div>
+                  <p className="text-[10px] text-[var(--tts-muted)] font-mono mb-2 leading-tight">{c.descricao}</p>
+                  <div className="font-mono text-xl font-bold" style={{ color: isSel ? "var(--tts-orange)" : "var(--tts-text)" }}>
+                    {fmtNum(Math.round(r.leadsPoliticos))}
+                    <span className="text-[10px] text-[var(--tts-muted)] font-normal"> leads</span>
+                  </div>
+                  <p className="text-[10px] text-[var(--tts-muted)] font-mono">
+                    {fmtNum(Math.round(r.conversas))} conversas · {fmtNum(Math.round(r.potenciaisVotos))} potenciais votos
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* KPIs do funil */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[
+              { label: "Pessoas alcançadas", v: funil.enviados, color: "var(--tts-text)" },
+              { label: "Aberturas", v: funil.aberturas, color: CHART_COLORS.cyan },
+              { label: "Ouviram áudio", v: funil.ouvintesAudio, color: CHART_COLORS.purple },
+              { label: "Respostas", v: funil.respondentes, color: CHART_COLORS.gold },
+              { label: "Conversas válidas", v: funil.conversas, color: CHART_COLORS.green },
+              { label: "Leads políticos", v: funil.leadsPoliticos, color: "var(--tts-orange)" },
+            ].map((k) => (
+              <div key={k.label} className="tts-card p-3">
+                <p className="text-[9px] uppercase tracking-wider text-[var(--tts-muted)] font-mono">{k.label}</p>
+                <p className="font-mono font-bold text-xl" style={{ color: k.color }}>{fmtNum(Math.round(k.v))}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Gráficos lado a lado */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Funil (barras horizontais decrescentes) */}
+            <div className="tts-card p-4">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">
+                Funil · cenário {CENARIOS_FUNIL[funilCenarioId].nome}
+              </p>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart
+                  data={[
+                    { etapa: "Enviados",   valor: funil.enviados,        cor: CHART_COLORS.cyan },
+                    { etapa: "Aberturas",  valor: funil.aberturas,       cor: CHART_COLORS.cyan },
+                    { etapa: "Ouvintes",   valor: funil.ouvintesAudio,   cor: CHART_COLORS.purple },
+                    { etapa: "Respostas",  valor: funil.respondentes,    cor: CHART_COLORS.gold },
+                    { etapa: "Conversas",  valor: funil.conversas,       cor: CHART_COLORS.green },
+                    { etapa: "Leads",      valor: funil.leadsPoliticos,  cor: CHART_COLORS.orange },
+                    { etapa: "Pot. votos", valor: funil.potenciaisVotos, cor: CHART_COLORS.orange },
+                  ]}
+                  layout="vertical"
+                  margin={{ left: 10, right: 30 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                  <XAxis type="number" tickFormatter={(v) => fmtNum(v)} stroke="var(--tts-muted)" fontSize={10} />
+                  <YAxis type="category" dataKey="etapa" stroke="var(--tts-muted)" fontSize={11} width={85} />
+                  <Tooltip
+                    formatter={(v: number) => [fmtNum(Math.round(v)), "Pessoas"]}
+                    contentStyle={{ background: "var(--tts-surface)", border: "1px solid var(--tts-border)", fontSize: 12 }}
+                  />
+                  <Bar dataKey="valor" radius={[0, 4, 4, 0]}>
+                    {[CHART_COLORS.cyan, CHART_COLORS.cyan, CHART_COLORS.purple, CHART_COLORS.gold, CHART_COLORS.green, CHART_COLORS.orange, CHART_COLORS.orange].map((c, i) => (
+                      <Cell key={i} fill={c} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Comparativo entre cenários */}
+            <div className="tts-card p-4">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">
+                Comparativo · Conservador × Provável × Otimista
+              </p>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart
+                  data={[
+                    { etapa: "Ouvintes",  conservador: funilCenarios.conservador.ouvintesAudio,   provavel: funilCenarios.provavel.ouvintesAudio,   otimista: funilCenarios.otimista.ouvintesAudio   },
+                    { etapa: "Respostas", conservador: funilCenarios.conservador.respondentes,    provavel: funilCenarios.provavel.respondentes,    otimista: funilCenarios.otimista.respondentes    },
+                    { etapa: "Conversas", conservador: funilCenarios.conservador.conversas,       provavel: funilCenarios.provavel.conversas,       otimista: funilCenarios.otimista.conversas       },
+                    { etapa: "Leads",     conservador: funilCenarios.conservador.leadsPoliticos,  provavel: funilCenarios.provavel.leadsPoliticos,  otimista: funilCenarios.otimista.leadsPoliticos  },
+                    { etapa: "Pot. votos",conservador: funilCenarios.conservador.potenciaisVotos, provavel: funilCenarios.provavel.potenciaisVotos, otimista: funilCenarios.otimista.potenciaisVotos },
+                  ]}
+                  margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                  <XAxis dataKey="etapa" stroke="var(--tts-muted)" fontSize={10} />
+                  <YAxis tickFormatter={(v) => fmtNum(v)} stroke="var(--tts-muted)" fontSize={10} />
+                  <Tooltip
+                    formatter={(v: number) => fmtNum(Math.round(v))}
+                    contentStyle={{ background: "var(--tts-surface)", border: "1px solid var(--tts-border)", fontSize: 12 }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="conservador" name="Conservador" fill={CHART_COLORS.cyan}   radius={[3,3,0,0]} />
+                  <Bar dataKey="provavel"    name="Provável"    fill={CHART_COLORS.orange} radius={[3,3,0,0]} />
+                  <Bar dataKey="otimista"    name="Otimista"    fill={CHART_COLORS.green}  radius={[3,3,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Sliders de taxas (ajuste fino) */}
+          <div className="tts-card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono">
+                Ajuste fino das taxas (override do cenário)
+              </p>
+              <button
+                onClick={() => aplicarCenarioFunil(funilCenarioId)}
+                className="text-[10px] font-mono text-[var(--tts-muted)] hover:text-[var(--tts-orange)] flex items-center gap-1"
+              >
+                <RotateCcw className="size-3" /> Restaurar cenário
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {([
+                ["taxaAbertura",         "Abertura / visualização",   "% dos disparos enviados"],
+                ["taxaEscutaAudio",      "Escuta do áudio",           "% das aberturas"],
+                ["taxaResposta",         "Resposta",                  "% dos ouvintes"],
+                ["taxaConversaValida",   "Conversa válida",           "% dos respondentes"],
+                ["taxaQualificacaoLead", "Qualificação de lead",      "% das conversas"],
+                ["taxaIntencaoVoto",     "Intenção de voto",          "% dos leads"],
+              ] as const).map(([key, label, hint]) => (
+                <div key={key}>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-mono">{label}</label>
+                    <span className="text-xs font-mono font-bold" style={{ color: "var(--tts-orange)" }}>
+                      {(funilTaxas[key] * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={Math.round(funilTaxas[key] * 100)}
+                    onChange={(e) => setFunilTaxas(t => ({ ...t, [key]: Number(e.target.value) / 100 }))}
+                    className="w-full accent-[var(--tts-orange)]"
+                  />
+                  <p className="text-[10px] text-[var(--tts-muted)] font-mono">{hint}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Texto comercial automático */}
+          <div className="tts-card p-5 !border-[var(--tts-orange)]">
+            <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-2">
+              Resumo comercial · {CENARIOS_FUNIL[funilCenarioId].nome}
+            </p>
+            <ul className="space-y-1.5 text-sm">
+              <li>
+                Com este volume, a campanha pode gerar aproximadamente{" "}
+                <strong style={{ color: "var(--tts-orange)" }}>{fmtNum(Math.round(funil.conversas))} conversas qualificadas</strong> por mês.
+              </li>
+              <li>
+                Estimativa de <strong>{fmtNum(Math.round(funil.ouvintesAudio))} pessoas</strong> ouvindo o áudio do candidato.
+              </li>
+              <li>
+                Potencial de <strong style={{ color: "var(--tts-orange)" }}>{fmtNum(Math.round(funil.leadsPoliticos))} leads políticos</strong> para abordagem ativa pela equipe.
+              </li>
+              <li>
+                Projeção de <strong>{fmtNum(Math.round(funil.potenciaisVotos))} possíveis intenções de voto</strong> declaradas no fluxo.
+              </li>
+              <li className="text-[11px] text-[var(--tts-muted)] font-mono pt-1">
+                Custo por lead estimado: <strong>{funil.leadsPoliticos > 0 ? fmtBRL(planoRecomendado.preco / funil.leadsPoliticos) : "—"}</strong>
+                {" · "}Custo por conversa: <strong>{funil.conversas > 0 ? fmtBRL(planoRecomendado.preco / funil.conversas) : "—"}</strong>
+              </li>
+            </ul>
+          </div>
+        </section>
+
         {/* Cenários */}
         <section>
           <SectionTitle icon={<Sparkles className="size-4" />} title="Cenários rápidos" hint="Aplique presets aos sliders" />
