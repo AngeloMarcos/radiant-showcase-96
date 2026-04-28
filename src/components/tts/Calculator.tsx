@@ -139,6 +139,35 @@ export function Calculator() {
   const planos = useMemo(() => calcPlanos(calc.precoVenda, setup), [calc.precoVenda, setup]);
   const anual = useMemo(() => calcAnual(calc.custoTotalMes, calc.precoVenda, setup), [calc.custoTotalMes, calc.precoVenda, setup]);
 
+  // ===== Ramp-up (crescimento gradual) =====
+  const [rampAtivo, setRampAtivo] = useState(false);
+  const [rampMeses, setRampMeses] = useState(6);
+  const [rampDisparosIni, setRampDisparosIni] = useState(1500);
+  const [rampPctAudioIni, setRampPctAudioIni] = useState(10);
+  const [rampPctMoIni, setRampPctMoIni] = useState(15);
+
+  const rampData = useMemo<RampMes[]>(() => {
+    if (!rampAtivo) return [];
+    return calcRampUp({
+      meses: rampMeses,
+      disparosInicial: rampDisparosIni,
+      disparosFinal: totalDisparos,
+      pctAudioInicial: rampPctAudioIni,
+      pctAudioFinal: pctAudio,
+      duracaoSeg,
+      tokensPorMsg,
+      modeloGpt,
+      ferramenta: ferramentaAudio === "comparar" ? "elevenlabs" : ferramentaAudio,
+      moBase,
+      pctMoInicial: rampPctMoIni,
+      pctMoFinal: pctMo,
+      cambio,
+      setup,
+    });
+  }, [rampAtivo, rampMeses, rampDisparosIni, rampPctAudioIni, rampPctMoIni,
+      totalDisparos, pctAudio, duracaoSeg, tokensPorMsg, modeloGpt,
+      ferramentaAudio, moBase, pctMo, cambio, setup]);
+
   // ===== Gráfico de barras =====
   const chartData = useMemo(() => {
     const gptBrl = calc.gpt.totalUsd * cambio;
