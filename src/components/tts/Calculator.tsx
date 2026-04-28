@@ -88,6 +88,8 @@ export function Calculator() {
   const [duracaoSeg, setDuracaoSeg] = useState(10);
   const [quantidadeNumeros, setQuantidadeNumeros] = useState(30);
   const [moPlanoId, setMoPlanoId] = useState<MoPlanoId>("padrao");
+  const [moCustomAtivo, setMoCustomAtivo] = useState(false);
+  const [moPrecoCustom, setMoPrecoCustom] = useState(220); // R$/número customizado
   const [cambio, setCambio] = useState(5.80);
   const [setup, setSetup] = useState(4500);
   const [ferramentaAudio, setFerramentaAudio] = useState<AudioTool>("elevenlabs");
