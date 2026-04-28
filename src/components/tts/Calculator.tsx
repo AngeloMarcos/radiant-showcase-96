@@ -661,11 +661,18 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                 </p>
 
                 <div className="mt-4 space-y-1.5 text-xs font-mono">
-                  <Row k="Plano base"          v={`${fmtUSD(calc.eleven.plano.fixoUsd)}/mês`} />
-                  <Row k="Minutos inclusos"    v={`${fmtNum(calc.eleven.minutosInclusos)} min`} />
-                  <Row k="Minutos necessários" v={`${fmtNum(calc.eleven.minutosNecessarios, 1)} min`} />
-                  <Row k="Excedente"           v={`${fmtNum(calc.eleven.excedenteMin, 1)} min`} />
-                  <Row k="Custo excedente"     v={fmtUSD(calc.eleven.excedenteUsd)} />
+                  {([
+                    ["Plano base",          `${fmtUSD(calc.eleven.plano.fixoUsd)}/mês`],
+                    ["Minutos inclusos",    `${fmtNum(calc.eleven.minutosInclusos)} min`],
+                    ["Minutos necessários", `${fmtNum(calc.eleven.minutosNecessarios, 1)} min`],
+                    ["Excedente",           `${fmtNum(calc.eleven.excedenteMin, 1)} min`],
+                    ["Custo excedente",     fmtUSD(calc.eleven.excedenteUsd)],
+                  ] as [string, string][]).map(([k, v]) => (
+                    <div key={k} className="flex justify-between text-[var(--tts-muted)]">
+                      <span>{k}</span>
+                      <span className="text-[var(--tts-text)]">{v}</span>
+                    </div>
+                  ))}
                   <div className="border-t border-[var(--tts-border)] pt-1.5 mt-1.5 flex justify-between font-bold">
                     <span>Total ElevenLabs</span>
                     <span style={{ color: "var(--tts-orange)" }}>{fmtUSD(calc.eleven.totalUsd)}/mês</span>
