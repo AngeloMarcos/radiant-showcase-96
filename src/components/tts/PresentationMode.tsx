@@ -1,19 +1,20 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
 import { X, ChevronLeft, ChevronRight, Check, Sparkles, Maximize2 } from "lucide-react";
-import { fmtBRL, fmtNum } from "./lib/calc";
-import type { PlanoTier } from "./lib/calc";
+import { fmtBRL, fmtNum, calcPlanos } from "./lib/calc";
+
+type Plano = ReturnType<typeof calcPlanos>[number];
 
 interface Props {
   open: boolean;
   onClose: () => void;
   nomeCliente: string;
-  planos: PlanoTier[];
+  planos: Plano[];
   quantidadeNumeros: number;
   disparosEfetivos: number;
   minutosMes: number;
-  onCopiarProposta: (p: PlanoTier) => void;
-  onBaixarPDF: (p: PlanoTier) => void;
+  onCopiarProposta: (p: Plano) => void;
+  onBaixarPDF: (p: Plano) => void;
 }
 
 type Slide = "capa" | "planos" | "destaque" | "fechamento";
