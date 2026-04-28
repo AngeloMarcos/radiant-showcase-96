@@ -110,13 +110,29 @@ export function Calculator() {
   const [mostrarHistorico, setMostrarHistorico] = useState(false);
   const [salvo, setSalvo] = useState(false);
 
+  // ===== Escala por número (modo proporcional) =====
+  // Quando ativo, disparos/pctAudio/infra são DERIVADOS da qtd de números.
+  const escala = useMemo(() => calcEscalaPorNumero({
+    quantidadeNumeros,
+    disparosPorNumero,
+    audiosPorNumero,
+    duracaoMediaSeg: duracaoSeg,
+    tokensPorMsg,
+    custoInfraPorNumero,
+  }), [quantidadeNumeros, disparosPorNumero, audiosPorNumero, duracaoSeg, tokensPorMsg, custoInfraPorNumero]);
+
+  // Valores efetivamente usados no cálculo (variam conforme o modo).
+  const disparosEfetivos = modoEscala === "porNumero" ? escala.disparosTotais : totalDisparos;
+  const pctAudioEfetivo  = modoEscala === "porNumero" ? escala.pctAudioDerivado : pctAudio;
+  const infraBrlEfetivo  = modoEscala === "porNumero" ? escala.custoInfraTotalBrl : 0;
+
   // ===== Cálculos memorizados =====
   const calc = useMemo(() => {
-    const { audiosMes, minutosMes } = calcMinutos(totalDisparos, pctAudio, duracaoSeg);
+    const { audiosMes, minutosMes } = calcMinutos(disparosEfetivos, pctAudioEfetivo, duracaoSeg);
     const eleven = calcElevenLabs(minutosMes, qualidade);
     const playht = calcPlayht(minutosMes);
     const polly = calcPolly(minutosMes);
-    const gpt = calcGpt(totalDisparos, pctAudio, tokensPorMsg, modeloGpt);
+    const gpt = calcGpt(disparosEfetivos, pctAudioEfetivo, tokensPorMsg, modeloGpt);
 
     const audioUsd =
       ferramentaAudio === "elevenlabs" ? eleven.totalUsd :
@@ -134,7 +150,7 @@ export function Calculator() {
     const custoTextoBrl = gpt.totalUsd * cambio;
     const custoApiUsd = audioUsd + gpt.totalUsd;
     const custoApiBrl = custoAudioBrl + custoTextoBrl;
-    const custoInfraBrl = 0; // n8n self-hosted
+    const custoInfraBrl = infraBrlEfetivo;
     const custoTecnicoBrl = custoApiBrl + custoInfraBrl;
 
     // Mão de obra: por número de WhatsApp ativo, conforme plano selecionado
@@ -151,6 +167,7 @@ export function Calculator() {
     const custoPrimeiroMes = custoTotalMes + setup;
     const venda = calcVenda(custoTotalMes, setup, 0.40);
     const custoPorNumero = quantidadeNumeros > 0 ? custoTotalMes / quantidadeNumeros : 0;
+    const custoPorDisparo = disparosEfetivos > 0 ? custoTotalMes / disparosEfetivos : 0;
 
     return {
       audiosMes, minutosMes,
@@ -158,11 +175,11 @@ export function Calculator() {
       audioUsd, audioLabel,
       custoAudioBrl, custoTextoBrl, custoInfraBrl, custoTecnicoBrl,
       custoApiUsd, custoApiBrl,
-      custoMoBrl, custoMoLegadoBrl, moPorPlano, pctMoNoTotal, custoPorNumero,
+      custoMoBrl, custoMoLegadoBrl, moPorPlano, pctMoNoTotal, custoPorNumero, custoPorDisparo,
       custoTotalMes, custoPrimeiroMes,
       ...venda,
     };
-  }, [totalDisparos, pctAudio, duracaoSeg, quantidadeNumeros, moPlanoId, cambio, setup, ferramentaAudio, qualidade, modeloGpt, tokensPorMsg]);
+  }, [disparosEfetivos, pctAudioEfetivo, duracaoSeg, quantidadeNumeros, moPlanoId, cambio, setup, ferramentaAudio, qualidade, modeloGpt, tokensPorMsg, infraBrlEfetivo]);
 
   const planos = useMemo(() => calcPlanos(calc.precoVenda, setup), [calc.precoVenda, setup]);
   const anual = useMemo(() => calcAnual(calc.custoTotalMes, calc.precoVenda, setup), [calc.custoTotalMes, calc.precoVenda, setup]);
