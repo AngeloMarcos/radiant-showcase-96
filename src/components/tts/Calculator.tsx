@@ -1123,7 +1123,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                             contentStyle={{ background: "#0d1119", border: "1px solid #1a2235", borderRadius: 8, fontSize: 12, color: "#d8e4f5" }}
                             labelFormatter={(l) => `Mês ${l}`}
                             formatter={(v, name) =>
-                              name === "MO (% base)" ? `${v}%` : fmtNum(Number(v))
+                              name === "Números ativos" ? `${v} nº` : fmtNum(Number(v))
                             }
                           />
                           <Legend wrapperStyle={{ fontSize: 12 }} />
@@ -1131,8 +1131,8 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                             strokeWidth={2} dot={{ r: 3 }} name="Áudios/mês" />
                           <Line yAxisId="left" type="monotone" dataKey="textos" stroke={CHART_COLORS.cyan}
                             strokeWidth={2} dot={{ r: 3 }} name="Textos/mês" />
-                          <Line yAxisId="right" type="monotone" dataKey="moPct" stroke={CHART_COLORS.orange}
-                            strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} name="MO (% base)" />
+                          <Line yAxisId="right" type="monotone" dataKey="numeros" stroke={CHART_COLORS.orange}
+                            strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} name="Números ativos" />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
