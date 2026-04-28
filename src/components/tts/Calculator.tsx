@@ -859,6 +859,39 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                 />
               </div>
 
+              {/* Botões de preset proporcional 1/N da meta */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mr-1">
+                  Mês 1 = 1/N da meta:
+                </span>
+                {[2, 3, 4, 6, 12].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => {
+                      setRampMeses(n);
+                      setRampDisparosIni(Math.max(500, Math.round(totalDisparos / n / 500) * 500));
+                      setRampPctAudioIni(Math.round(pctAudio / n));
+                      setRampPctMoIni(Math.round(pctMo / n));
+                    }}
+                    className="tts-btn !text-xs !py-1 !px-3"
+                    title={`Começa com 1/${n} do volume final e cresce em ${n} meses`}
+                  >
+                    1/{n} ({n}m)
+                  </button>
+                ))}
+                <button
+                  onClick={() => {
+                    setRampDisparosIni(totalDisparos);
+                    setRampPctAudioIni(pctAudio);
+                    setRampPctMoIni(pctMo);
+                  }}
+                  className="tts-btn !text-xs !py-1 !px-3"
+                  title="Inicia já no volume final (sem ramp)"
+                >
+                  100% (sem ramp)
+                </button>
+              </div>
+
               {rampData.length > 0 && (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
