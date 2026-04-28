@@ -46,38 +46,66 @@ export function calcMinutos(disparos: number, pctAudio: number, duracaoSeg: numb
   return { audiosMes, minutosMes };
 }
 
-export interface ElevenResult {
+export interface ElevenPlanResult {
   plano: ElevenPlan;
-  fixoUsd: number;
+  minutosNecessarios: number;
+  minutosInclusos: number;
   excedenteMin: number;
+  precoPlanoUsd: number;
   excedenteUsd: number;
   totalUsd: number;
-  status: "ok" | "warn" | "danger"; // ok = sem excedente, warn = excedente <= 30%, danger = > 30%
+  cobre: boolean;                // true se inclusos >= necessários
+  status: "ok" | "warn" | "danger";
 }
 
-// Escolhe o plano que minimiza o custo total: testa todos os planos e pega o mais barato.
-// Para volumes baixos, plano Creator com excedente pode bater Pro; para volumes altos,
-// vale a pena subir para reduzir taxa de excedente.
-export function calcElevenLabs(minutosMes: number): ElevenResult {
-  let best: ElevenResult | null = null;
-  for (const plano of ELEVEN_PLANS) {
-    const excMin = Math.max(0, minutosMes - plano.minutosInclusos);
-    const excUsd = excMin * plano.taxaExcedenteUsd;
-    const total = plano.fixoUsd + excUsd;
-    const pctExc = plano.minutosInclusos > 0 ? excMin / plano.minutosInclusos : 0;
-    const status: ElevenResult["status"] =
-      excMin === 0 ? "ok" : pctExc <= 0.30 ? "warn" : "danger";
-    const candidate: ElevenResult = {
-      plano,
-      fixoUsd: plano.fixoUsd,
-      excedenteMin: excMin,
-      excedenteUsd: excUsd,
-      totalUsd: total,
-      status,
-    };
-    if (!best || candidate.totalUsd < best.totalUsd) best = candidate;
-  }
-  return best!;
+export interface ElevenResult extends ElevenPlanResult {
+  // Mantém compat com a API antiga (campos usados na UI):
+  fixoUsd: number;
+  // Lista comparativa de TODOS os planos elegíveis para a qualidade escolhida:
+  comparativo: ElevenPlanResult[];
+}
+
+function avaliarPlano(plano: ElevenPlan, minutosMes: number): ElevenPlanResult {
+  const excMin = Math.max(0, minutosMes - plano.minutosInclusos);
+  const excUsd = excMin * plano.taxaExcedenteUsd;
+  const total = plano.fixoUsd + excUsd;
+  const pctExc = plano.minutosInclusos > 0 ? excMin / plano.minutosInclusos : 0;
+  const status: ElevenPlanResult["status"] =
+    excMin === 0 ? "ok" : pctExc <= 0.30 ? "warn" : "danger";
+  return {
+    plano,
+    minutosNecessarios: minutosMes,
+    minutosInclusos: plano.minutosInclusos,
+    excedenteMin: excMin,
+    precoPlanoUsd: plano.fixoUsd,
+    excedenteUsd: excUsd,
+    totalUsd: total,
+    cobre: excMin === 0,
+    status,
+  };
+}
+
+// Escolhe o plano mais barato dentre os elegíveis para a qualidade selecionada.
+// Estratégia: 1) prefere o plano mais barato que COBRE o volume sem excedente;
+// 2) se nenhum cobre, escolhe o de menor custo total (fixo + excedente).
+export function calcElevenLabs(
+  minutosMes: number,
+  qualidade: AudioQuality = "good",
+): ElevenResult {
+  const elegiveis = ELEVEN_PLANS.filter(p => p.qualidades.includes(qualidade));
+  const comparativo = elegiveis.map(p => avaliarPlano(p, minutosMes));
+
+  const cobrem = comparativo.filter(r => r.cobre);
+  const recomendado =
+    cobrem.length > 0
+      ? cobrem.reduce((a, b) => (a.totalUsd <= b.totalUsd ? a : b))
+      : comparativo.reduce((a, b) => (a.totalUsd <= b.totalUsd ? a : b));
+
+  return {
+    ...recomendado,
+    fixoUsd: recomendado.plano.fixoUsd,
+    comparativo,
+  };
 }
 
 export function calcPlayht(minutosMes: number) {
