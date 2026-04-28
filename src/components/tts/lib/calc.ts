@@ -34,6 +34,83 @@ export const ELEVEN_PLANS: ElevenPlan[] = [
   { id: "business", nome: "Business", fixoUsd: 1320, minutosInclusos: 11000,  taxaExcedenteUsd: ELEVEN_OVERAGE_USD_PER_MIN, qualidadeLabel: "Enterprise · SLA",               qualidades: ["studio"] },
 ];
 
+// ============= MÃO DE OBRA por número de WhatsApp =============
+// Subimos mão de obra por número porque R$ 100/numero é subprecificado
+// para operação de campanha política com automação, GPT e áudio ElevenLabs.
+// O valor inclui: setup, ajustes de fluxo, monitoramento diário,
+// suporte durante a campanha e otimização de prompts/voz.
+export const MO_PRECO_MINIMO_POR_NUMERO = 150;
+export const MO_PRECO_LEGADO_POR_NUMERO = 100; // referência histórica para comparativo
+
+export type MoPlanoId = "basico" | "padrao" | "premium";
+
+export interface MoPlano {
+  id: MoPlanoId;
+  nome: string;
+  rotulo: string;          // texto para botão/seletor
+  precoPorNumero: number;
+  descricao: string;
+  inclui: string[];
+}
+
+export const MO_PLANOS: Record<MoPlanoId, MoPlano> = {
+  basico: {
+    id: "basico",
+    nome: "Básico",
+    rotulo: "Básico (mínimo viável)",
+    precoPorNumero: 150,
+    descricao: "Operação enxuta",
+    inclui: ["Setup inicial", "Monitoramento básico", "Suporte horário comercial"],
+  },
+  padrao: {
+    id: "padrao",
+    nome: "Padrão",
+    rotulo: "Padrão (recomendado)",
+    precoPorNumero: 220,
+    descricao: "Acompanhamento ativo",
+    inclui: [
+      "Setup completo",
+      "Ajustes semanais de fluxo",
+      "Monitoramento diário",
+      "Suporte estendido",
+      "Otimização de prompts",
+    ],
+  },
+  premium: {
+    id: "premium",
+    nome: "Premium",
+    rotulo: "Premium (máximo acompanhamento)",
+    precoPorNumero: 320,
+    descricao: "Operação assistida",
+    inclui: [
+      "Setup premium",
+      "Ajustes contínuos de fluxo",
+      "Monitoramento em tempo real",
+      "Suporte 24h durante a campanha",
+      "A/B de áudios e textos",
+      "Gerente de conta dedicado",
+    ],
+  },
+};
+
+export function calcularMaoDeObraPorNumero(
+  quantidadeNumeros: number,
+  plano: MoPlanoId,
+): number {
+  const preco = Math.max(MO_PLANOS[plano].precoPorNumero, MO_PRECO_MINIMO_POR_NUMERO);
+  return Math.max(0, quantidadeNumeros) * preco;
+}
+
+export function calcularPercentualMaoDeObra(
+  custoTecnico: number,
+  maoDeObra: number,
+): number {
+  const total = custoTecnico + maoDeObra;
+  return total > 0 ? (maoDeObra / total) * 100 : 0;
+}
+
+// ============= GPT =============
+
 export const GPT_PRICES = {
   "gpt4o-mini": { input: 0.15, output: 0.60, label: "GPT-4o mini" },
   "gpt4o":      { input: 2.50, output: 10.00, label: "GPT-4o" },
