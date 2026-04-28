@@ -767,6 +767,16 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                     <span style={{ color: "var(--tts-orange)" }}>{fmtUSD(calc.eleven.totalUsd)}/mês</span>
                   </div>
                 </div>
+
+                {/* Motivo da recomendação */}
+                <div className="mt-4 p-3 rounded-md bg-[var(--tts-surface-2)] border border-[var(--tts-border)]">
+                  <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-1">
+                    Por que este plano?
+                  </p>
+                  <p className="text-[11px] font-mono leading-relaxed">
+                    {calc.eleven.motivoRecomendacao}
+                  </p>
+                </div>
               </div>
 
               {/* Comparativo entre planos elegíveis */}
