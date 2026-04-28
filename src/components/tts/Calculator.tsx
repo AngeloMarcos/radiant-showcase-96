@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   calcMinutos, calcElevenLabs, calcPlayht, calcPolly, calcGpt, calcVenda,
   calcPlanos, calcAnual, GPT_PRICES, fmtBRL, fmtUSD, fmtNum, type GptModel,
@@ -60,12 +60,12 @@ interface SimulacaoSalva {
 
 export function Calculator() {
   // ===== Tema =====
-  const [tema, setTema] = useState<"dark" | "light">(() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem("tts_theme") as "dark" | "light") || "dark";
-    }
-    return "dark";
-  });
+  const [tema, setTema] = useState<"dark" | "light">("dark");
+  // Hidrata do localStorage após o mount para evitar mismatch SSR/CSR
+  useEffect(() => {
+    const t = localStorage.getItem("tts_theme") as "dark" | "light" | null;
+    if (t === "light" || t === "dark") setTema(t);
+  }, []);
   function toggleTema() {
     const novo = tema === "dark" ? "light" : "dark";
     setTema(novo);
@@ -88,11 +88,13 @@ export function Calculator() {
   const [copiado, setCopiado] = useState(false);
 
   // ===== Histórico =====
-  const [historico, setHistorico] = useState<SimulacaoSalva[]>(() => {
-    if (typeof window === "undefined") return [];
-    try { return JSON.parse(localStorage.getItem("tts_history") || "[]"); }
-    catch { return []; }
-  });
+  const [historico, setHistorico] = useState<SimulacaoSalva[]>([]);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("tts_history");
+      if (raw) setHistorico(JSON.parse(raw));
+    } catch { /* ignore */ }
+  }, []);
   const [mostrarHistorico, setMostrarHistorico] = useState(false);
   const [salvo, setSalvo] = useState(false);
 
@@ -353,7 +355,13 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
               </span>
             </div>
             <h1 className="font-display text-3xl md:text-5xl font-bold leading-tight">
-              TTS Cost <span style={{ color: "var(--tts-orange)" }}>Calculator</span>
+              TTS Cost{" "}
+              <span style={{
+                background: "var(--tts-gradient)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}>Calculator</span>
             </h1>
             <p className="text-sm text-[var(--tts-muted)] mt-2 max-w-xl">
               Calcule custos de API, infraestrutura e mão de obra para soluções de disparo
