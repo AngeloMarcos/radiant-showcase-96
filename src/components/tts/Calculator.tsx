@@ -1261,7 +1261,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                   value={rampPctAudioIni}
                   onChange={(v) => { setRampPctAudioIni(v); setRampPreset(null); }}
                   min={0} max={100} suffix="%"
-                  hint={`Meta: ${pctAudio}%`}
+                  hint={`Meta: ${pctAudioEfetivo.toFixed(0)}%`}
                 />
                 <SliderInput
                   label="Números no mês 1"
