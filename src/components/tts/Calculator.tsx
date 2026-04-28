@@ -52,8 +52,8 @@ interface SimulacaoSalva {
   duracaoSeg: number;
   ferramenta: string;
   modeloGpt: string;
-  moBase: number;
-  pctMo: number;
+  quantidadeNumeros: number;
+  moPlanoId: MoPlanoId;
   cambio: number;
   setup: number;
   custoTotal: number;
