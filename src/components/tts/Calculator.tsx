@@ -506,8 +506,13 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
               />
               <SliderInput label="Duração / áudio"    value={duracaoSeg}    onChange={setDuracaoSeg}    min={5} max={120} suffix="s" />
               <SliderInput label="Tokens / msg texto" value={tokensPorMsg}  onChange={setTokensPorMsg}  min={50} max={2000} step={10} />
-              <SliderInput label="MO base (fixa BRL)"  value={moBase}        onChange={setMoBase}        min={0} max={20000} step={100} suffix="R$" hint="valor fixo somado todo mês" />
-              <SliderInput label="% MO sobre técnico"   value={pctMo}         onChange={setPctMo}         min={0} max={100} suffix="%" hint={`+ ${fmtBRL(calc.moPercentual)} (sobre custos técnicos)`} />
+              <SliderInput
+                label="Números WhatsApp ativos"
+                value={quantidadeNumeros}
+                onChange={setQuantidadeNumeros}
+                min={1} max={200} step={1}
+                hint={`MO ${moPlanoSel.nome}: ${fmtBRL(calc.custoMoBrl)}/mês (${pctNumber(calc.pctMoNoTotal)}% do total)`}
+              />
               <NumberField label="Câmbio USD → BRL" value={cambio} onChange={setCambio} step={0.05} prefix="R$" />
               <NumberField label="Setup (one-time)" value={setup}  onChange={setSetup}  step={100} prefix="R$" />
             </div>
