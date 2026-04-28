@@ -21,7 +21,7 @@ import {
   Calculator as CalcIcon, Mic, MessageSquare, Wrench, TrendingUp,
   AlertTriangle, Lightbulb, Copy, Check, Sparkles, Sun, Moon,
   RotateCcw, Save, Clock, Printer, FileDown, Presentation,
-  CalendarClock, ShieldCheck, ShieldAlert,
+  CalendarClock, ShieldCheck, ShieldAlert, Target,
 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { PresentationMode } from "./PresentationMode";
