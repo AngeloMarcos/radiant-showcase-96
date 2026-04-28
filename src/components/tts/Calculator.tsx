@@ -735,6 +735,129 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
           </section>
         )}
 
+        {/* Mão de Obra — seleção de plano e comparativo vs R$ 100/número */}
+        <section>
+          <SectionTitle
+            icon={<Wrench className="size-4" />}
+            title="Mão de Obra (por número de WhatsApp)"
+            hint={`${quantidadeNumeros} números ativos`}
+          />
+          <p className="text-xs text-[var(--tts-muted)] font-mono mb-4">
+            Inclui setup, ajustes de fluxo, monitoramento, suporte durante a campanha e otimização contínua.
+          </p>
+
+          {/* Cards dos planos */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            {(Object.values(MO_PLANOS)).map(p => {
+              const total = calc.moPorPlano[p.id];
+              const isSel = p.id === moPlanoId;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setMoPlanoId(p.id)}
+                  className={`tts-card p-5 text-left transition-all hover:-translate-y-0.5 ${
+                    isSel ? "!border-[var(--tts-orange)]" : ""
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-display font-bold">{p.rotulo}</h3>
+                    {isSel && <span className="tts-badge tts-badge-orange">Selecionado</span>}
+                  </div>
+                  <div className="font-mono text-2xl font-bold" style={{ color: isSel ? "var(--tts-orange)" : "var(--tts-text)" }}>
+                    {fmtBRL(p.precoPorNumero)}
+                    <span className="text-[10px] text-[var(--tts-muted)] font-normal">/número</span>
+                  </div>
+                  <p className="text-[11px] text-[var(--tts-muted)] font-mono mb-3">
+                    Total p/ {quantidadeNumeros} nº: <span className="text-[var(--tts-text)] font-bold">{fmtBRL(total)}</span>/mês
+                  </p>
+                  <ul className="text-xs space-y-1">
+                    {p.inclui.map(f => (
+                      <li key={f} className="flex items-start gap-1.5">
+                        <Check className="size-3 text-[var(--tts-green)] mt-0.5 shrink-0" />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Comparativo: legado vs novo */}
+          {(() => {
+            const legado = calc.custoMoLegadoBrl;
+            const novo = calc.custoMoBrl;
+            const diff = novo - legado;
+            const diffPct = legado > 0 ? (diff / legado) * 100 : 0;
+            return (
+              <div className="tts-card p-5 !border-[var(--tts-orange)]">
+                <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">
+                  Comparativo · cobrança atual vs nova precificação
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm font-mono">
+                  <div>
+                    <p className="text-[10px] text-[var(--tts-muted)] uppercase">Cobrando R$ 100/número (atual)</p>
+                    <p className="text-xl font-bold">{fmtBRL(legado)}/mês</p>
+                    <p className="text-[10px] text-[var(--tts-muted)]">{quantidadeNumeros} × R$ 100</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-[var(--tts-muted)] uppercase">Plano {moPlanoSel.nome} (novo)</p>
+                    <p className="text-xl font-bold" style={{ color: "var(--tts-orange)" }}>{fmtBRL(novo)}/mês</p>
+                    <p className="text-[10px] text-[var(--tts-muted)]">{quantidadeNumeros} × {fmtBRL(moPlanoSel.precoPorNumero)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-[var(--tts-muted)] uppercase">Diferença</p>
+                    <p className="text-xl font-bold" style={{ color: diff >= 0 ? "var(--tts-green)" : "var(--tts-red)" }}>
+                      {diff >= 0 ? "+" : ""}{fmtBRL(diff)}
+                    </p>
+                    <p className="text-[10px] text-[var(--tts-muted)]">
+                      {diff >= 0 ? "+" : ""}{diffPct.toFixed(1)}% · subprecificação corrigida
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-[var(--tts-border)] text-xs font-mono">
+                  <div className="flex justify-between"><span className="text-[var(--tts-muted)]">MO no custo total</span><span className="font-bold">{calc.pctMoNoTotal.toFixed(1)}%</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--tts-muted)]">Custo / número</span><span className="font-bold">{fmtBRL(calc.custoPorNumero)}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--tts-muted)]">Custo total / mês</span><span className="font-bold" style={{ color: "var(--tts-orange)" }}>{fmtBRL(calc.custoTotalMes)}</span></div>
+                </div>
+
+                {/* Tabela rápida dos 3 planos */}
+                <div className="overflow-x-auto mt-4">
+                  <table className="w-full text-xs font-mono">
+                    <thead>
+                      <tr className="text-[10px] uppercase text-[var(--tts-muted)] border-b border-[var(--tts-border)]">
+                        <th className="text-left p-2">Plano</th>
+                        <th className="text-right p-2">R$ / número</th>
+                        <th className="text-right p-2">Total MO/mês</th>
+                        <th className="text-right p-2">% do custo total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(Object.values(MO_PLANOS)).map(p => {
+                        const total = calc.moPorPlano[p.id];
+                        const pct = calcularPercentualMaoDeObra(calc.custoTecnicoBrl, total);
+                        const isSel = p.id === moPlanoId;
+                        return (
+                          <tr key={p.id} className={`border-b border-[var(--tts-border)]/60 ${isSel ? "bg-[var(--tts-surface-2)]" : ""}`}>
+                            <td className="p-2">
+                              <span className={isSel ? "font-bold text-[var(--tts-orange)]" : ""}>{p.nome}</span>
+                              {isSel && <span className="ml-1 text-[9px]">★</span>}
+                            </td>
+                            <td className="p-2 text-right">{fmtBRL(p.precoPorNumero)}</td>
+                            <td className="p-2 text-right font-bold">{fmtBRL(total)}</td>
+                            <td className="p-2 text-right">{pct.toFixed(1)}%</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
+        </section>
+
         {/* Breakdown */}
         <section>
           <SectionTitle icon={<MessageSquare className="size-4" />} title="Breakdown detalhado" />
