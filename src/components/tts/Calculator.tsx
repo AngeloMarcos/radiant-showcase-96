@@ -1153,6 +1153,104 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
             })}
           </div>
 
+          {/* Ajuste manual de R$/número (override do plano selecionado) */}
+          <div className="tts-card p-5 mb-4">
+            <div className="flex items-start justify-between gap-4 mb-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono">
+                  Ajuste manual · valor por número
+                </p>
+                <p className="text-xs text-[var(--tts-muted)] font-mono mt-1">
+                  Sobrescreve o R$/número do plano selecionado. Mínimo: {fmtBRL(150)} (piso operacional).
+                </p>
+              </div>
+              <label className="flex items-center gap-2 text-xs font-mono cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={moCustomAtivo}
+                  onChange={(e) => setMoCustomAtivo(e.target.checked)}
+                  className="size-4 accent-[var(--tts-orange)]"
+                />
+                <span>{moCustomAtivo ? "Personalizado ativo" : "Usar plano fixo"}</span>
+              </label>
+            </div>
+
+            {moCustomAtivo && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min={150}
+                    max={500}
+                    step={5}
+                    value={moPrecoCustom}
+                    onChange={(e) => setMoPrecoCustom(Number(e.target.value))}
+                    className="flex-1 accent-[var(--tts-orange)]"
+                  />
+                  <div className="flex items-center gap-1 font-mono text-sm">
+                    <span className="text-[var(--tts-muted)]">R$</span>
+                    <input
+                      type="number"
+                      min={150}
+                      max={2000}
+                      step={5}
+                      value={moPrecoCustom}
+                      onChange={(e) => setMoPrecoCustom(Math.max(150, Number(e.target.value) || 150))}
+                      className="w-20 bg-transparent border border-[var(--tts-border)] rounded px-2 py-1 text-right font-bold"
+                      style={{ color: "var(--tts-orange)" }}
+                    />
+                    <span className="text-[10px] text-[var(--tts-muted)]">/nº</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
+                  <div className="tts-card p-2">
+                    <p className="text-[9px] uppercase text-[var(--tts-muted)]">Total MO/mês</p>
+                    <p className="font-bold text-base" style={{ color: "var(--tts-orange)" }}>
+                      {fmtBRL(quantidadeNumeros * Math.max(moPrecoCustom, 150))}
+                    </p>
+                  </div>
+                  <div className="tts-card p-2">
+                    <p className="text-[9px] uppercase text-[var(--tts-muted)]">vs plano {MO_PLANOS[moPlanoId].nome}</p>
+                    <p className="font-bold text-base">
+                      {(() => {
+                        const diff = (moPrecoCustom - MO_PLANOS[moPlanoId].precoPorNumero);
+                        const sign = diff >= 0 ? "+" : "";
+                        return `${sign}${fmtBRL(diff)}/nº`;
+                      })()}
+                    </p>
+                  </div>
+                  <div className="tts-card p-2">
+                    <p className="text-[9px] uppercase text-[var(--tts-muted)]">vs R$ 100 (legado)</p>
+                    <p className="font-bold text-base">
+                      {((moPrecoCustom / 100 - 1) * 100).toFixed(0)}%
+                    </p>
+                  </div>
+                  <div className="tts-card p-2">
+                    <p className="text-[9px] uppercase text-[var(--tts-muted)]">% do custo total</p>
+                    <p className="font-bold text-base">
+                      {calc.pctMoNoTotal.toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {[150, 180, 220, 280, 320, 400].map(v => (
+                    <button
+                      key={v}
+                      onClick={() => setMoPrecoCustom(v)}
+                      className={`text-[11px] font-mono px-2.5 py-1 rounded border transition ${
+                        moPrecoCustom === v
+                          ? "border-[var(--tts-orange)] text-[var(--tts-orange)] bg-[var(--tts-surface-2)]"
+                          : "border-[var(--tts-border)] text-[var(--tts-muted)] hover:text-[var(--tts-text)]"
+                      }`}
+                    >
+                      {fmtBRL(v)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Comparativo: legado vs novo */}
           {(() => {
             const legado = calc.custoMoLegadoBrl;
