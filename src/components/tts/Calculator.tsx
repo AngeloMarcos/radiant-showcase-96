@@ -267,6 +267,14 @@ export function Calculator() {
     reservaMinima,
   }), [calc.custoTecnicoBrl, calc.custoMoBrl, planoRecomendado.preco, reservaMinima]);
 
+  // ===== Funil de retorno (recalcula em tempo real com disparos × taxas) =====
+  const funil = useMemo(() => calcFunilRetorno(disparosEfetivos, funilTaxas), [disparosEfetivos, funilTaxas]);
+  const funilCenarios = useMemo(() => ({
+    conservador: calcFunilRetorno(disparosEfetivos, CENARIOS_FUNIL.conservador),
+    provavel:    calcFunilRetorno(disparosEfetivos, CENARIOS_FUNIL.provavel),
+    otimista:    calcFunilRetorno(disparosEfetivos, CENARIOS_FUNIL.otimista),
+  }), [disparosEfetivos]);
+
   // ===== Ramp-up (crescimento gradual) =====
   const [rampAtivo, setRampAtivo] = useState(false);
   const [rampMeses, setRampMeses] = useState(6);
