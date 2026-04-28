@@ -140,6 +140,8 @@ export interface ElevenResult extends ElevenPlanResult {
   fixoUsd: number;
   // Lista comparativa de TODOS os planos elegíveis para a qualidade escolhida:
   comparativo: ElevenPlanResult[];
+  // Texto explicando POR QUE este plano foi recomendado.
+  motivoRecomendacao: string;
 }
 
 function avaliarPlano(plano: ElevenPlan, minutosMes: number): ElevenPlanResult {
@@ -163,8 +165,10 @@ function avaliarPlano(plano: ElevenPlan, minutosMes: number): ElevenPlanResult {
 }
 
 // Escolhe o plano mais barato dentre os elegíveis para a qualidade selecionada.
-// Estratégia: 1) prefere o plano mais barato que COBRE o volume sem excedente;
-// 2) se nenhum cobre, escolhe o de menor custo total (fixo + excedente).
+// REGRA: 1) Se houver planos que COBREM o volume sem excedente, escolhe o de
+// MENOR PREÇO FIXO entre eles. 2) Caso contrário, escolhe o de MENOR CUSTO
+// TOTAL (fixo + excedente) — nunca recomenda um plano com excedente quando
+// existe outro sem excedente mais barato no total.
 export function calcElevenLabs(
   minutosMes: number,
   qualidade: AudioQuality = "good",
@@ -173,15 +177,30 @@ export function calcElevenLabs(
   const comparativo = elegiveis.map(p => avaliarPlano(p, minutosMes));
 
   const cobrem = comparativo.filter(r => r.cobre);
-  const recomendado =
-    cobrem.length > 0
-      ? cobrem.reduce((a, b) => (a.totalUsd <= b.totalUsd ? a : b))
-      : comparativo.reduce((a, b) => (a.totalUsd <= b.totalUsd ? a : b));
+  let recomendado: ElevenPlanResult;
+  let motivoRecomendacao: string;
+
+  if (cobrem.length > 0) {
+    // Mais barato (preço fixo) entre os que cobrem sem excedente.
+    recomendado = cobrem.reduce((a, b) => (a.precoPlanoUsd <= b.precoPlanoUsd ? a : b));
+    motivoRecomendacao =
+      `Cobre ${minutosMes.toFixed(1)} min com ${recomendado.minutosInclusos} min inclusos ` +
+      `pelo menor preço fixo entre os planos compatíveis ($${recomendado.precoPlanoUsd}/mês).`;
+  } else {
+    // Nenhum cobre — escolhe menor custo total (fixo + excedente).
+    recomendado = comparativo.reduce((a, b) => (a.totalUsd <= b.totalUsd ? a : b));
+    motivoRecomendacao =
+      `Nenhum plano cobre ${minutosMes.toFixed(1)} min sem excedente. ` +
+      `${recomendado.plano.nome} tem o menor custo total: $${recomendado.precoPlanoUsd} fixo + ` +
+      `$${recomendado.excedenteUsd.toFixed(2)} excedente (${recomendado.excedenteMin.toFixed(1)} min) ` +
+      `= $${recomendado.totalUsd.toFixed(2)}/mês.`;
+  }
 
   return {
     ...recomendado,
     fixoUsd: recomendado.plano.fixoUsd,
     comparativo,
+    motivoRecomendacao,
   };
 }
 
