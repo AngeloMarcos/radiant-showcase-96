@@ -1,50 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Navbar } from "@/components/mentoark/Navbar";
-import { Hero } from "@/components/mentoark/Hero";
-import { Modules } from "@/components/mentoark/Modules";
-import { TechStack } from "@/components/mentoark/TechStack";
-import { TseData } from "@/components/mentoark/TseData";
-import { Timeline } from "@/components/mentoark/Timeline";
-import { Differentials } from "@/components/mentoark/Differentials";
-import { CTA } from "@/components/mentoark/CTA";
-import { Footer } from "@/components/mentoark/Footer";
-import { BackToTop } from "@/components/mentoark/BackToTop";
+import { Calculator } from "@/components/tts/Calculator";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Plataforma de Inteligência Eleitoral — MentoArk" },
+      { title: "TTS Cost Calculator — Precificação de Disparos com IA" },
       {
         name: "description",
         content:
-          "Sistema completo de consulta eleitoral, gestão de campanha e análise de dados com dados oficiais do TSE e automação via WhatsApp.",
+          "Calculadora interativa de custos de API (ElevenLabs, Play.ht, Polly, GPT) e mão de obra para soluções de disparo via WhatsApp.",
       },
-      { property: "og:title", content: "Plataforma de Inteligência Eleitoral — MentoArk" },
+      { property: "og:title", content: "TTS Cost Calculator" },
       {
         property: "og:description",
         content:
-          "Inteligência eleitoral para campanhas que vencem. Dados oficiais do TSE, CRM, mapas de calor e WhatsApp nativo.",
+          "Calcule custos, margens e proposta comercial para automação de disparos com áudio e texto.",
       },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Index,
 });
 
 function Index() {
-  return (
-    <main className="mentoark min-h-screen">
-      <Navbar />
-      <Hero />
-      <Modules />
-      <TechStack />
-      <TseData />
-      <Timeline />
-      <Differentials />
-      <CTA />
-      <Footer />
-      <BackToTop />
-    </main>
-  );
+  return <Calculator />;
 }
