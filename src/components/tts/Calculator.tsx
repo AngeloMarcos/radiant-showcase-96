@@ -19,11 +19,11 @@ import { jsPDF } from "jspdf";
 type AudioTool = "elevenlabs" | "playht" | "polly" | "comparar";
 
 const CHART_COLORS = {
-  orange: "#ff6b2b",
-  cyan: "#00d4ff",
-  purple: "#a78bfa",
-  green: "#3ddc84",
-  gold: "#f5c542",
+  orange: "#8b5cf6",   // MentoArk Violet (primary highlight)
+  cyan: "#3b82f6",     // MentoArk Blue
+  purple: "#6366f1",   // MentoArk Indigo
+  green: "#10b981",
+  gold: "#f59e0b",
 } as const;
 
 interface Cenario {
