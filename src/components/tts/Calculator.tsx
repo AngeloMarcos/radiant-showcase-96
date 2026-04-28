@@ -3,7 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import {
   calcMinutos, calcElevenLabs, calcPlayht, calcPolly, calcGpt, calcVenda,
   calcPlanos, calcAnual, calcRampUp, GPT_PRICES, fmtBRL, fmtUSD, fmtNum,
-  type GptModel, type RampMes, type AudioQuality,
+  calcularMaoDeObraPorNumero, calcularPercentualMaoDeObra,
+  MO_PLANOS, MO_PRECO_LEGADO_POR_NUMERO,
+  type GptModel, type RampMes, type AudioQuality, type MoPlanoId,
 } from "./lib/calc";
 import { SliderInput } from "./ui/SliderInput";
 import { StatCard } from "./ui/StatCard";
