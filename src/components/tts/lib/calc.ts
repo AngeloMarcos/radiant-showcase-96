@@ -546,7 +546,7 @@ export function calcSensibilidadePorNumero(i: SensibilidadeInput): Sensibilidade
     const eleven = calcElevenLabs(escala.minutosTotaisAudio, i.qualidade);
     const gpt = calcGpt(escala.disparosTotais, escala.pctAudioDerivado, i.tokensPorMsg, i.modeloGpt);
     const custoApiBrl = (eleven.totalUsd + gpt.totalUsd) * i.cambio;
-    const custoMo = calcularMaoDeObraPorNumero(q, i.moPlanoId);
+    const custoMo = calcularMaoDeObraPorNumero(q, i.moPlanoId, i.moPrecoOverride);
     const custoTotal = custoApiBrl + escala.custoInfraTotalBrl + custoMo;
     const venda = calcVenda(custoTotal, i.setup, margem);
     const precoFinal = aplicarPisoMargem(custoTotal, venda.precoVenda);
