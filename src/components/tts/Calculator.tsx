@@ -1153,8 +1153,8 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
               <button onClick={exportarPDF} className="tts-btn !text-xs">
                 <Printer className="size-3" /> Exportar PDF
               </button>
-              <button onClick={() => copiarProposta(planos[1])} className="tts-btn !text-xs">
-                {copiado ? <><Check className="size-3" /> Copiado!</> : <><Copy className="size-3" /> Copiar Plano Pro</>}
+              <button onClick={() => copiarProposta(planoRecomendado)} className="tts-btn !text-xs">
+                {copiado ? <><Check className="size-3" /> Copiado!</> : <><Copy className="size-3" /> Copiar Plano Profissional</>}
               </button>
             </div>
           </div>
