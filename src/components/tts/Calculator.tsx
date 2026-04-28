@@ -1110,27 +1110,27 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                 <SliderInput
                   label="Duração do ramp"
                   value={rampMeses}
-                  onChange={setRampMeses}
+                  onChange={(v) => { setRampMeses(v); setRampPreset(null); }}
                   min={2} max={12} suffix="meses"
                 />
                 <SliderInput
                   label="Disparos no mês 1"
                   value={rampDisparosIni}
-                  onChange={setRampDisparosIni}
+                  onChange={(v) => { setRampDisparosIni(v); setRampPreset(null); }}
                   min={500} max={Math.max(500, totalDisparos)} step={500}
                   hint={`Meta no mês ${rampMeses}: ${fmtNum(totalDisparos)}`}
                 />
                 <SliderInput
                   label="% Áudio no mês 1"
                   value={rampPctAudioIni}
-                  onChange={setRampPctAudioIni}
+                  onChange={(v) => { setRampPctAudioIni(v); setRampPreset(null); }}
                   min={0} max={100} suffix="%"
                   hint={`Meta: ${pctAudio}%`}
                 />
                 <SliderInput
                   label="Números no mês 1"
                   value={rampNumerosIni}
-                  onChange={setRampNumerosIni}
+                  onChange={(v) => { setRampNumerosIni(v); setRampPreset(null); }}
                   min={1} max={Math.max(quantidadeNumeros, 1)} step={1}
                   hint={`Meta: ${quantidadeNumeros} números (plano ${moPlanoSel.nome})`}
                 />
@@ -1141,28 +1141,33 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                 <span className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mr-1">
                   Mês 1 = 1/N da meta:
                 </span>
-                {[2, 3, 4, 6, 12].map(n => (
-                  <button
-                    key={n}
-                    onClick={() => {
-                      setRampMeses(n);
-                      setRampDisparosIni(Math.max(500, Math.round(totalDisparos / n / 500) * 500));
-                      setRampPctAudioIni(Math.round(pctAudio / n));
-                      setRampNumerosIni(Math.max(1, Math.round(quantidadeNumeros / n)));
-                    }}
-                    className="tts-btn !text-xs !py-1 !px-3"
-                    title={`Começa com 1/${n} do volume final e cresce em ${n} meses`}
-                  >
-                    1/{n} ({n}m)
-                  </button>
-                ))}
+                {[2, 3, 4, 6, 12].map(n => {
+                  const ativo = rampPreset === n;
+                  return (
+                    <button
+                      key={n}
+                      onClick={() => {
+                        setRampMeses(n);
+                        setRampDisparosIni(Math.max(500, Math.round(totalDisparos / n / 500) * 500));
+                        setRampPctAudioIni(Math.round(pctAudio / n));
+                        setRampNumerosIni(Math.max(1, Math.round(quantidadeNumeros / n)));
+                        setRampPreset(n);
+                      }}
+                      className={`tts-btn !text-xs !py-1 !px-3 ${ativo ? "tts-btn-active" : ""}`}
+                      title={`Começa com 1/${n} do volume final e cresce em ${n} meses`}
+                    >
+                      1/{n} ({n}m)
+                    </button>
+                  );
+                })}
                 <button
                   onClick={() => {
                     setRampDisparosIni(totalDisparos);
                     setRampPctAudioIni(pctAudio);
                     setRampNumerosIni(quantidadeNumeros);
+                    setRampPreset("full");
                   }}
-                  className="tts-btn !text-xs !py-1 !px-3"
+                  className={`tts-btn !text-xs !py-1 !px-3 ${rampPreset === "full" ? "tts-btn-active" : ""}`}
                   title="Inicia já no volume final (sem ramp)"
                 >
                   100% (sem ramp)
