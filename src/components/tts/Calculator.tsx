@@ -84,6 +84,7 @@ export function Calculator() {
   const [cambio, setCambio] = useState(5.80);
   const [setup, setSetup] = useState(4500);
   const [ferramentaAudio, setFerramentaAudio] = useState<AudioTool>("elevenlabs");
+  const [qualidade, setQualidade] = useState<AudioQuality>("good");
   const [modeloGpt, setModeloGpt] = useState<GptModel>("gpt4o-mini");
   const [tokensPorMsg, setTokensPorMsg] = useState(200);
   const [mostrarAnual, setMostrarAnual] = useState(false);
