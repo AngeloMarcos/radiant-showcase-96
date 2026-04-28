@@ -1,51 +1,88 @@
-# Apresentação MentoArk — Plataforma Eleitoral
+# TTS Cost Calculator — Plano de Construção
 
-Transformar o HTML enviado em uma landing page React moderna no app TanStack, totalmente responsiva (mobile-first), com micro-interações, animações suaves no scroll e elementos dinâmicos que tornam a apresentação envolvente em qualquer dispositivo.
+Calculadora interativa, single-page, 100% client-side, para precificar soluções de disparo WhatsApp com áudio (ElevenLabs / Play.ht / Polly) + texto (GPT) + mão de obra. Tema dark navy com acentos laranja/ciano, tudo recalcula em tempo real.
+
+## Rota e estrutura
+
+- Substituir o conteúdo de `src/routes/index.tsx` (atualmente landing MentoArk) pela nova calculadora. A landing antiga e os componentes em `src/components/mentoark/` serão removidos para evitar arquivos órfãos.
+- `head()` da rota: title "TTS Cost Calculator", description em PT-BR.
+- Novo namespace de componentes: `src/components/tts/`.
+
+## Componentes (todos em `src/components/tts/`)
+
+- `Calculator.tsx` — container raiz, dono do estado e dos `useMemo` de cálculo. Passa props derivadas para os filhos.
+- `ConfigPanel.tsx` — Seção 1 (disparos, MO, câmbio, setup) com sliders shadcn + inputs numéricos.
+- `ToolSelector.tsx` — Seção 2 (tabs para áudio: ElevenLabs / Play.ht / Polly / Comparar; toggle GPT-4o mini vs GPT-4o; input tokens).
+- `Results.tsx` — Seção 4, 7 cards grandes (custo API USD/BRL, MO, total/mês, 1º mês, preço venda, lucro, faturamento anual) com transição suave nos números.
+- `Breakdown.tsx` — Seção 5, tabela detalhada (item, USD, BRL, % do total) com subtotais.
+- `ComparisonChart.tsx` — Seção 6, Recharts BarChart empilhado (áudio + texto + MO) para as 3 ferramentas lado a lado.
+- `Scenarios.tsx` — Seção 7, 4 botões de cenário; clicar aplica os valores ao estado (Pro destacado como "Recomendado").
+- `Proposal.tsx` — Seção 8, gera 3 planos (Starter/Pro/Premium) com features, badge "Recomendado" no Pro, botão "Copiar Proposta" usando `navigator.clipboard`.
+- `AnnualTable.tsx` — Seção 9, toggle expansível com 12 meses + acumulados.
+- `Alerts.tsx` — Seção de alertas contextuais (excedente alto, MO > APIs, margem baixa, Play.ht muito mais barato) com cores semânticas.
+- `ui/` — `StatCard`, `SliderInput` (slider + número editável sincronizados), `Badge` reaproveitado do shadcn.
+
+## Lógica de cálculo (`src/components/tts/lib/calc.ts`)
+
+Funções puras, fáceis de testar e memorizáveis:
+
+- `calcMinutos(disparos, pctAudio, duracaoSeg)` → `{ audiosMes, minutosMes }`.
+- `calcElevenLabs(minutosMes)` — escolhe o plano de menor custo total testando os 4 (Creator/Pro/Scale/Business). Retorna `{ plano, fixo, excedenteMin, excedenteCusto, total, status: 'ok'|'warn'|'danger' }`. Comentários no código explicam a heurística de escolha.
+- `calcPlayht(minutosMes)` — `chars = min × 375`, `(chars/1000) × 0.020`.
+- `calcPolly(minutosMes)` — `(chars/1_000_000) × 19.20`.
+- `calcGpt(disparos, pctAudio, tokensPorMsg, modelo)` — split 50/50 input/output, preços por modelo.
+- `calcTotais(...)` — agrega API USD, converte BRL, soma MO, calcula 1º mês com setup.
+- `calcVenda(custoTotal, margem = 0.40)` → `{ precoVenda, lucroMes, margemPct, faturamentoAnual }`.
+- `calcPlanos(precoVenda)` → Starter (×0.85), Pro (×1.0), Premium (×1.28).
+- `calcAnual(custoMes, precoVenda, setup)` → array de 12 meses com acumulados.
+
+Tudo envolto em um único `useMemo` no `Calculator` para recálculo instantâneo.
+
+## Estado (em `Calculator.tsx`)
+
+```ts
+{
+  totalDisparos: 5000,
+  pctAudio: 30,
+  duracaoSeg: 10,
+  moBase: 2500,
+  pctMo: 40,
+  cambio: 5.80,
+  setup: 4500,
+  ferramentaAudio: 'elevenlabs' | 'playht' | 'polly' | 'comparar',
+  modeloGpt: 'gpt4o-mini' | 'gpt4o',
+  tokensPorMsg: 200,
+  mostrarAnual: false,
+}
+```
+
+`pctTexto` é derivado (`100 - pctAudio`).
 
 ## Identidade visual
 
-- **Tema:** dark, roxo/violeta + azul (mantendo a paleta original: `#7c3aed`, `#a78bfa`, `#3b82f6`, fundo `#07071a`).
-- **Tipografia:** Inter (texto) + JetBrains Mono (rótulos técnicos), via Google Fonts.
-- **Estilo:** glassmorphism sutil, glows radiais, grid de fundo, gradientes em destaques.
+- Adicionar fontes Google (`Bricolage Grotesque` 700/800, `DM Mono` 400/500) e tokens de cor (navy/laranja/ciano/verde/vermelho/dourado) em `src/styles.css`, escopados com a classe raiz `.tts-app` para não poluir o resto do design system.
+- Grid de fundo sutil com `background-image` de linhas finas; cards com border 1px e radius pequeno; números sempre em DM Mono.
+- Badges coloridos para status do plano ElevenLabs (verde/amarelo/vermelho) e para "Recomendado".
+- Layout responsivo: grid 1 col mobile, 2 col tablet, 3 col desktop nos cards de resultado; sliders touch-friendly.
+- Formatação: BRL via `toLocaleString('pt-BR', { style:'currency', currency:'BRL' })`; USD via `$X,XX`.
 
-## Estrutura da página (single page com âncoras suaves)
+## Dependências
 
-1. **Navbar fixa** — logo MentoArk, links (Módulos, Tecnologia, Planos, Cronograma) + CTA. Em mobile vira menu hambúrguer animado (drawer lateral).
-2. **Hero** — badge pulsante, título grande com gradiente ("Inteligência Eleitoral para Campanhas que Vencem"), subtítulo, 2 CTAs e 4 stats animados (contador rolando de 0 ao valor: 12 anos, 5.563 municípios, R$220/mês, 12 semanas).
-3. **Módulos (4 cards)** — Consulta Eleitoral, Comparativo de Candidatos, Gestão de Campanha, Relatório com Mapa. Cards com hover tilt 3D leve, borda gradiente animada no topo, tags.
-4. **Stack tecnológico (9 cards)** — Frontend, IA, Banco, Dados TSE, Mapas, WhatsApp, Gráficos, Pagamentos, Infra.
-5. **Dados TSE** — tabela de cobertura + 3 cards destaque (5.563 municípios, R$0 licença, 6 eleições).
-6. **Custos operacionais** — lista de itens com valores + bloco de total destacado (R$220/mês) + caixa de margem (~89%).
-7. **Planos (3 tiers + avulso)** — Essencial R$117, Profissional R$197 (destacado com gradiente roxo e badge "Mais popular"), Elite R$287 + card de Relatório Avulso (R$100–140).
-8. **Cronograma (timeline 12 semanas)** — 6 fases, linha vertical com dots pulsantes, em mobile vira cards empilhados verticalmente com indicador lateral.
-9. **Diferenciais (6 cards)** — TSE oficial, WhatsApp, IA roadmap, 100% nacional, entrega 10× rápida, margem 89%.
-10. **CTA final** — "Pronto para começar?", botões de contato + cards com site/e-mail/telefone.
-11. **Footer** — MentoArk · Abril 2026.
+- `recharts` — verificar `package.json`; instalar via `bun add recharts` se ausente.
+- shadcn (`Slider`, `Tabs`, `Card`, `Button`, `Input`, `Badge`, `Switch`) — todos já presentes.
+- `lucide-react` — já presente.
 
-## Interatividade & dinamismo
+## Limpeza
 
-- **Scroll reveal** em cada seção (fade + slide up) usando IntersectionObserver.
-- **Contadores animados** nas stats do hero quando entram em viewport.
-- **Parallax sutil** nos glows do hero (movimento ao mover o mouse no desktop).
-- **Hover refinado**: cards levantam, ganham borda violeta luminosa e sombra colorida.
-- **Toggle de planos**: switch "Mensal / Anual" com recálculo (anual = 2 meses grátis, exibido com desconto).
-- **Mobile**: navbar vira drawer animado, grids 1 coluna, timeline com layout vertical compacto, tipografia escalonada com `clamp()`, todos os toques têm feedback (active states).
-- **Smooth scroll** entre âncoras com offset da navbar.
-- **Botão "voltar ao topo"** que aparece após scroll.
+- Deletar `src/components/mentoark/` (10+ arquivos da landing antiga) e `.lovable/plan.md`, já que a página inicial passa a ser a calculadora.
 
-## Responsividade
+## Comportamento e UX
 
-- Mobile-first com breakpoints em 640px, 768px, 1024px.
-- Touch-friendly: botões mín. 44px, espaçamento generoso.
-- Imagens/ícones em SVG/emoji escaláveis.
-- Testado em larguras de 360px até 1920px.
+- Todos os inputs sincronizados (slider ↔ número).
+- Mudar % áudio atualiza % texto automaticamente (campo readonly).
+- Cenários animam os sliders para os novos valores (transição CSS sobre o valor numérico exibido).
+- Gráfico comparativo sempre mostra as 3 ferramentas, independente da seleção.
+- Banners de alerta aparecem condicionalmente conforme as regras descritas.
+- Botão "Copiar Proposta" mostra confirmação visual ("Copiado!") por 2s.
 
-## Detalhes técnicos
-
-- Substitui o placeholder em `src/routes/index.tsx` por uma página completa.
-- Cria componentes em `src/components/mentoark/`: `Navbar.tsx`, `Hero.tsx`, `Modules.tsx`, `TechStack.tsx`, `TseData.tsx`, `Costs.tsx`, `Pricing.tsx`, `Timeline.tsx`, `Differentials.tsx`, `CTA.tsx`, `Footer.tsx`, e hook `useCountUp.ts` + `useReveal.ts`.
-- Estilização com Tailwind v4 + tokens CSS customizados adicionados em `src/styles.css` (variáveis da paleta MentoArk, sem quebrar o design system existente — escopadas via classe `.mentoark`).
-- Atualiza `head()` da rota com title, description e og tags em português ("Plataforma de Inteligência Eleitoral — MentoArk").
-- Sem backend / sem dependências novas pesadas — apenas componentes React puros + Tailwind.
-
-Aprove o plano e eu construo a página completa.
+Aprove para eu construir.
