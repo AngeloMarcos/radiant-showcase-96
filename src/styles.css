@@ -271,24 +271,25 @@
 
 /* ============ TEMA CLARO ============ */
 .tts-app.tts-light {
-  --tts-bg: #f8fafc;
+  /* Tema claro MentoArk — Azul vibrante + Laranja accent */
+  --tts-bg: #dde1e8;             /* gray 220/16/88 */
   --tts-surface: #ffffff;
-  --tts-surface-2: #f1f5f9;
-  --tts-border: #e2e8f0;
-  --tts-border-strong: #cbd5e1;
-  --tts-orange: #ea5a1b;
-  --tts-orange-dim: rgba(234,90,27,.12);
-  --tts-cyan: #0891b2;
-  --tts-cyan-dim: rgba(8,145,178,.12);
+  --tts-surface-2: #eef0f4;
+  --tts-border: #b3bac8;
+  --tts-border-strong: #8a93a6;
+  --tts-orange: #1d6dde;          /* MentoArk Primary Blue (217 91% 45%) */
+  --tts-orange-dim: rgba(29,109,222,.12);
+  --tts-cyan: #ee6b15;             /* MentoArk Accent Orange (24 95% 48%) */
+  --tts-cyan-dim: rgba(238,107,21,.12);
   --tts-green: #16a34a;
   --tts-green-dim: rgba(22,163,74,.12);
   --tts-red: #dc2626;
   --tts-red-dim: rgba(220,38,38,.12);
   --tts-gold: #d97706;
   --tts-gold-dim: rgba(217,119,6,.12);
-  --tts-text: #0f172a;
-  --tts-muted: #64748b;
-  --tts-purple: #7c3aed;
+  --tts-text: #0a1428;             /* foreground 222 47% 8% */
+  --tts-muted: #3d4a63;             /* muted-fg 215 25% 30% */
+  --tts-purple: #6366f1;            /* MentoArk Indigo */
 }
 
 .tts-app.tts-light.tts-grid-bg {
