@@ -343,7 +343,7 @@ export function calcRampUp(input: RampInput): RampMes[] {
     const t = input.meses === 1 ? 1 : (i - 1) / (input.meses - 1);
     const disparos = Math.round(lerp(input.disparosInicial, input.disparosFinal, t));
     const pctAudio = lerp(input.pctAudioInicial, input.pctAudioFinal, t);
-    const pctMo = lerp(input.pctMoInicial, input.pctMoFinal, t);
+    const numeros = Math.max(1, Math.round(lerp(input.numerosInicial, input.numerosFinal, t)));
 
     const { audiosMes, minutosMes } = calcMinutos(disparos, pctAudio, input.duracaoSeg);
     const eleven = calcElevenLabs(minutosMes);
@@ -359,7 +359,7 @@ export function calcRampUp(input: RampInput): RampMes[] {
     const custoAudioBrl = audioUsd * input.cambio;
     const custoTextoBrl = gpt.totalUsd * input.cambio;
     const custoApiBrl = custoAudioBrl + custoTextoBrl;
-    const custoMoBrl = input.moBase * (pctMo / 100);
+    const custoMoBrl = calcularMaoDeObraPorNumero(numeros, input.moPlanoId);
     const custoTotal = custoApiBrl + custoMoBrl;
     const venda = calcVenda(custoTotal, input.setup, margem);
 
@@ -375,7 +375,7 @@ export function calcRampUp(input: RampInput): RampMes[] {
       mes: i,
       disparos,
       pctAudio,
-      pctMo,
+      numeros,
       audiosMes,
       minutosMes,
       custoAudioBrl,
