@@ -376,10 +376,11 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
   }
 
   const breakdown = [
-    { item: `${calc.audioLabel}`, usd: calc.audioUsd, brl: calc.audioUsd * cambio },
-    { item: `${GPT_PRICES[modeloGpt].label} / texto`, usd: calc.gpt.totalUsd, brl: calc.gpt.totalUsd * cambio },
+    { item: `${calc.audioLabel} · áudio`, usd: calc.audioUsd, brl: calc.audioAudioBrlOpt ?? calc.custoAudioBrl },
+    { item: `${GPT_PRICES[modeloGpt].label} · texto`, usd: calc.gpt.totalUsd, brl: calc.custoTextoBrl },
     { item: "n8n (self-hosted)", usd: 0, brl: 0 },
-    { item: `Mão de obra (${pctMo}%)`, usd: null as number | null, brl: calc.custoMoBrl },
+    { item: `Mão de obra base (fixa)`, usd: null as number | null, brl: moBase },
+    { item: `MO % sobre técnico (${pctMo}%)`, usd: null as number | null, brl: calc.moPercentual },
   ];
   const subtotalApiBrl = calc.custoApiBrl;
   const textosMes = totalDisparos * (1 - pctAudio / 100);
