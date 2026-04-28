@@ -698,3 +698,61 @@ export const fmtUSD = (n: number) =>
 
 export const fmtNum = (n: number, dec = 0) =>
   n.toLocaleString("pt-BR", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+
+// =====================================================================
+// RETORNO ESTIMADO DA CAMPANHA — funil de conversão
+// =====================================================================
+
+export interface TaxasFunil {
+  taxaAbertura: number;        // 0..1
+  taxaEscutaAudio: number;     // 0..1 (sobre aberturas)
+  taxaResposta: number;        // 0..1 (sobre ouvintes)
+  taxaConversaValida: number;  // 0..1 (sobre respondentes)
+  taxaQualificacaoLead: number;// 0..1 (sobre conversas)
+  taxaIntencaoVoto: number;    // 0..1 (sobre leads)
+}
+
+export type CenarioFunilId = "conservador" | "provavel" | "otimista";
+
+export const CENARIOS_FUNIL: Record<CenarioFunilId, TaxasFunil & { nome: string; descricao: string }> = {
+  conservador: {
+    nome: "Conservador",
+    descricao: "Premissas pessimistas — base segura para promessa comercial.",
+    taxaAbertura: 0.70, taxaEscutaAudio: 0.45, taxaResposta: 0.08,
+    taxaConversaValida: 0.40, taxaQualificacaoLead: 0.35, taxaIntencaoVoto: 0.50,
+  },
+  provavel: {
+    nome: "Provável",
+    descricao: "Premissas médias — cenário esperado de operação saudável.",
+    taxaAbertura: 0.80, taxaEscutaAudio: 0.55, taxaResposta: 0.12,
+    taxaConversaValida: 0.50, taxaQualificacaoLead: 0.40, taxaIntencaoVoto: 0.55,
+  },
+  otimista: {
+    nome: "Otimista",
+    descricao: "Premissas agressivas — exige operação afiada e mensagem forte.",
+    taxaAbertura: 0.90, taxaEscutaAudio: 0.65, taxaResposta: 0.18,
+    taxaConversaValida: 0.60, taxaQualificacaoLead: 0.45, taxaIntencaoVoto: 0.60,
+  },
+};
+
+export interface FunilResultado {
+  enviados: number;
+  aberturas: number;
+  ouvintesAudio: number;
+  respondentes: number;
+  conversas: number;
+  leadsPoliticos: number;
+  potenciaisVotos: number;
+}
+
+export function calcFunilRetorno(disparos: number, taxas: TaxasFunil): FunilResultado {
+  const enviados = Math.max(0, disparos);
+  const aberturas = enviados * taxas.taxaAbertura;
+  const ouvintesAudio = aberturas * taxas.taxaEscutaAudio;
+  const respondentes = ouvintesAudio * taxas.taxaResposta;
+  const conversas = respondentes * taxas.taxaConversaValida;
+  const leadsPoliticos = conversas * taxas.taxaQualificacaoLead;
+  const potenciaisVotos = leadsPoliticos * taxas.taxaIntencaoVoto;
+  return { enviados, aberturas, ouvintesAudio, respondentes, conversas, leadsPoliticos, potenciaisVotos };
+}
+
