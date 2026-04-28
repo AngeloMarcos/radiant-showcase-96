@@ -2,7 +2,8 @@ import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   calcMinutos, calcElevenLabs, calcPlayht, calcPolly, calcGpt, calcVenda,
-  calcPlanos, calcAnual, GPT_PRICES, fmtBRL, fmtUSD, fmtNum, type GptModel,
+  calcPlanos, calcAnual, calcRampUp, GPT_PRICES, fmtBRL, fmtUSD, fmtNum,
+  type GptModel, type RampMes,
 } from "./lib/calc";
 import { SliderInput } from "./ui/SliderInput";
 import { StatCard } from "./ui/StatCard";
