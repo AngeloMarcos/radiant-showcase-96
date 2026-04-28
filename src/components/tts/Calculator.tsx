@@ -1506,7 +1506,6 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                   ))}
                 </div>
               </div>
-            )}
           </div>
 
           {/* Comparativo: legado vs novo */}
