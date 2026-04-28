@@ -273,8 +273,13 @@ export function Calculator() {
   if (calc.custoMoBrl > calc.custoApiBrl) {
     alertas.push({ tipo: "info", texto: "Sua mão de obra é o maior custo — considere aumentar o preço de venda." });
   }
-  if (calc.margemPct < 30) {
-    alertas.push({ tipo: "danger", texto: `⚠ Margem atual de ${calc.margemPct.toFixed(1)}% está abaixo de 30% — considere aumentar o preço de venda.` });
+  if (margemAbaixoMinima) {
+    alertas.push({
+      tipo: "danger",
+      texto: `🚨 PROTEJA SUA MARGEM: atual ${calc.margemPct.toFixed(1)}% — abaixo do mínimo obrigatório de ${(MARGEM_MINIMA_OBRIGATORIA * 100).toFixed(0)}%. Preço mínimo seguro: ${fmtBRL(precoMinimoSeguro)}.`,
+    });
+  } else if (calc.margemPct < 40) {
+    alertas.push({ tipo: "warn", texto: `Margem de ${calc.margemPct.toFixed(1)}% está abaixo do alvo de 40%. Considere reposicionar para o plano Profissional (${fmtBRL(planoRecomendado.preco)}).` });
   }
   if (calc.playht.totalUsd > 0 && calc.playht.totalUsd < calc.eleven.totalUsd * 0.3) {
     alertas.push({ tipo: "info", texto: "Play.ht está 3x+ mais barato neste volume — mas avalie a estabilidade da entrega." });
