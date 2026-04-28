@@ -1726,8 +1726,8 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                   <CalendarClock className="size-4 text-[var(--tts-orange)]" />
                   <h3 className="font-display font-bold">Resumo da condição especial</h3>
                   <span className={`tts-badge ml-auto ${
-                    campanha.risco === "ok" ? "tts-badge-green" :
-                    campanha.risco === "medio" ? "tts-badge-orange" : "tts-badge-red"
+                    campanha.risco === "ok" ? "tts-badge-ok" :
+                    campanha.risco === "medio" ? "tts-badge-orange" : "tts-badge-danger"
                   }`}>
                     {campanha.risco === "ok" ? "Margem protegida" : campanha.risco === "medio" ? "Sem reserva" : "RISCO ALTO"}
                   </span>
