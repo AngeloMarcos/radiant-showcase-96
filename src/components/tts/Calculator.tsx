@@ -2,11 +2,12 @@ import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   calcMinutos, calcElevenLabs, calcPlayht, calcPolly, calcGpt, calcVenda,
-  calcPlanos, calcAnual, calcRampUp, calcEscalaPorNumero,
+  calcPlanos, calcAnual, calcRampUp, calcEscalaPorNumero, calcSensibilidadePorNumero,
   GPT_PRICES, fmtBRL, fmtUSD, fmtNum,
   calcularMaoDeObraPorNumero, calcularPercentualMaoDeObra,
+  aplicarPisoMargem, MARGEM_MINIMA_OBRIGATORIA, MARGEM_PADRAO,
   MO_PLANOS, MO_PRECO_LEGADO_POR_NUMERO,
-  type GptModel, type RampMes, type AudioQuality, type MoPlanoId,
+  type GptModel, type RampMes, type AudioQuality, type MoPlanoId, type PlanoTier,
 } from "./lib/calc";
 import { SliderInput } from "./ui/SliderInput";
 import { StatCard } from "./ui/StatCard";
