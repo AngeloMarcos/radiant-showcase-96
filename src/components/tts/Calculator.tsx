@@ -1793,6 +1793,18 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
           TTS Cost Calculator · MentoArk · cálculo client-side · valores referenciais sujeitos a alteração de preços nas APIs
         </footer>
       </div>
+
+      <PresentationMode
+        open={apresentacaoAberta}
+        onClose={() => setApresentacaoAberta(false)}
+        nomeCliente={nomeCliente}
+        planos={planos}
+        quantidadeNumeros={quantidadeNumeros}
+        disparosEfetivos={disparosEfetivos}
+        minutosMes={calc.minutosMes}
+        onCopiarProposta={copiarProposta}
+        onBaixarPDF={baixarPropostaPDF}
+      />
     </div>
   );
 }
