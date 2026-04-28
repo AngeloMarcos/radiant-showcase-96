@@ -164,6 +164,114 @@ export function calcAnual(custoMes: number, precoVendaMes: number, setup: number
   return meses;
 }
 
+// ============= RAMP-UP / Crescimento gradual =============
+// Projeção mês a mês com aumento progressivo de volume. A mão de obra cresce
+// proporcionalmente ao volume (com teto = 100% do moBase).
+
+export interface RampInput {
+  meses: number;
+  disparosInicial: number;
+  disparosFinal: number;
+  pctAudioInicial: number;
+  pctAudioFinal: number;
+  duracaoSeg: number;
+  tokensPorMsg: number;
+  modeloGpt: GptModel;
+  ferramenta: "elevenlabs" | "playht" | "polly";
+  moBase: number;
+  pctMoInicial: number; // % da MO base no mês 1
+  pctMoFinal: number;   // % da MO base no mês final (proporcional ao volume)
+  cambio: number;
+  setup: number;
+  margem?: number;
+}
+
+export interface RampMes {
+  mes: number;
+  disparos: number;
+  pctAudio: number;
+  pctMo: number;
+  audiosMes: number;
+  minutosMes: number;
+  custoAudioBrl: number;
+  custoTextoBrl: number;
+  custoApiBrl: number;
+  custoMoBrl: number;
+  custoTotal: number;
+  precoVenda: number;
+  lucro: number;
+  receita: number;
+  lucroAcum: number;
+  receitaAcum: number;
+  custoAcum: number;
+}
+
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t;
+}
+
+export function calcRampUp(input: RampInput): RampMes[] {
+  const margem = input.margem ?? 0.40;
+  const meses: RampMes[] = [];
+  let custoAcum = 0;
+  let receitaAcum = 0;
+  let lucroAcum = 0;
+
+  for (let i = 1; i <= input.meses; i++) {
+    const t = input.meses === 1 ? 1 : (i - 1) / (input.meses - 1);
+    const disparos = Math.round(lerp(input.disparosInicial, input.disparosFinal, t));
+    const pctAudio = lerp(input.pctAudioInicial, input.pctAudioFinal, t);
+    const pctMo = lerp(input.pctMoInicial, input.pctMoFinal, t);
+
+    const { audiosMes, minutosMes } = calcMinutos(disparos, pctAudio, input.duracaoSeg);
+    const eleven = calcElevenLabs(minutosMes);
+    const playht = calcPlayht(minutosMes);
+    const polly = calcPolly(minutosMes);
+    const gpt = calcGpt(disparos, pctAudio, input.tokensPorMsg, input.modeloGpt);
+
+    const audioUsd =
+      input.ferramenta === "elevenlabs" ? eleven.totalUsd :
+      input.ferramenta === "playht"     ? playht.totalUsd :
+                                          polly.totalUsd;
+
+    const custoAudioBrl = audioUsd * input.cambio;
+    const custoTextoBrl = gpt.totalUsd * input.cambio;
+    const custoApiBrl = custoAudioBrl + custoTextoBrl;
+    const custoMoBrl = input.moBase * (pctMo / 100);
+    const custoTotal = custoApiBrl + custoMoBrl;
+    const venda = calcVenda(custoTotal, input.setup, margem);
+
+    const custoMes = i === 1 ? custoTotal + input.setup : custoTotal;
+    const receitaMes = i === 1 ? venda.precoVenda + input.setup : venda.precoVenda;
+    const lucroMes = receitaMes - custoMes;
+
+    custoAcum += custoMes;
+    receitaAcum += receitaMes;
+    lucroAcum += lucroMes;
+
+    meses.push({
+      mes: i,
+      disparos,
+      pctAudio,
+      pctMo,
+      audiosMes,
+      minutosMes,
+      custoAudioBrl,
+      custoTextoBrl,
+      custoApiBrl,
+      custoMoBrl,
+      custoTotal,
+      precoVenda: venda.precoVenda,
+      lucro: lucroMes,
+      receita: receitaMes,
+      lucroAcum,
+      receitaAcum,
+      custoAcum,
+    });
+  }
+  return meses;
+}
+
 export const fmtBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 });
 
