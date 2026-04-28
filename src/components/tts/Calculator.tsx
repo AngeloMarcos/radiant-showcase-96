@@ -193,7 +193,7 @@ export function Calculator() {
       custoTotalMes, custoPrimeiroMes,
       ...venda,
     };
-  }, [disparosEfetivos, pctAudioEfetivo, duracaoSeg, quantidadeNumeros, moPlanoId, cambio, setup, ferramentaAudio, qualidade, modeloGpt, tokensPorMsg, infraBrlEfetivo]);
+  }, [disparosEfetivos, pctAudioEfetivo, duracaoSeg, quantidadeNumeros, moPlanoId, moCustomAtivo, moPrecoCustom, cambio, setup, ferramentaAudio, qualidade, modeloGpt, tokensPorMsg, infraBrlEfetivo]);
 
   // Planos comerciais (Essencial / Profissional / Premium) — calculados a partir
   // do CUSTO TOTAL (não do preço sugerido), com margens e capacidades distintas.
