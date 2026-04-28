@@ -130,13 +130,20 @@ export function Calculator() {
     const custoInfraBrl = 0; // n8n self-hosted
     const custoTecnicoBrl = custoApiBrl + custoInfraBrl;
 
-    // Mão de obra: base fixa + percentual sobre custos técnicos
-    const moPercentual = custoTecnicoBrl * (pctMo / 100);
-    const custoMoBrl = moBase + moPercentual;
+    // Mão de obra: por número de WhatsApp ativo, conforme plano selecionado
+    const custoMoBrl = calcularMaoDeObraPorNumero(quantidadeNumeros, moPlanoId);
+    const custoMoLegadoBrl = quantidadeNumeros * MO_PRECO_LEGADO_POR_NUMERO;
+    const moPorPlano: Record<MoPlanoId, number> = {
+      basico:  calcularMaoDeObraPorNumero(quantidadeNumeros, "basico"),
+      padrao:  calcularMaoDeObraPorNumero(quantidadeNumeros, "padrao"),
+      premium: calcularMaoDeObraPorNumero(quantidadeNumeros, "premium"),
+    };
+    const pctMoNoTotal = calcularPercentualMaoDeObra(custoTecnicoBrl, custoMoBrl);
 
     const custoTotalMes = custoTecnicoBrl + custoMoBrl;
     const custoPrimeiroMes = custoTotalMes + setup;
     const venda = calcVenda(custoTotalMes, setup, 0.40);
+    const custoPorNumero = quantidadeNumeros > 0 ? custoTotalMes / quantidadeNumeros : 0;
 
     return {
       audiosMes, minutosMes,
@@ -144,11 +151,11 @@ export function Calculator() {
       audioUsd, audioLabel,
       custoAudioBrl, custoTextoBrl, custoInfraBrl, custoTecnicoBrl,
       custoApiUsd, custoApiBrl,
-      moPercentual, custoMoBrl,
+      custoMoBrl, custoMoLegadoBrl, moPorPlano, pctMoNoTotal, custoPorNumero,
       custoTotalMes, custoPrimeiroMes,
       ...venda,
     };
-  }, [totalDisparos, pctAudio, duracaoSeg, moBase, pctMo, cambio, setup, ferramentaAudio, qualidade, modeloGpt, tokensPorMsg]);
+  }, [totalDisparos, pctAudio, duracaoSeg, quantidadeNumeros, moPlanoId, cambio, setup, ferramentaAudio, qualidade, modeloGpt, tokensPorMsg]);
 
   const planos = useMemo(() => calcPlanos(calc.precoVenda, setup), [calc.precoVenda, setup]);
   const anual = useMemo(() => calcAnual(calc.custoTotalMes, calc.precoVenda, setup), [calc.custoTotalMes, calc.precoVenda, setup]);
