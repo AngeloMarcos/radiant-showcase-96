@@ -336,8 +336,8 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
       duracaoSeg,
       ferramenta: ferramentaAudio,
       modeloGpt,
-      moBase,
-      pctMo,
+      quantidadeNumeros,
+      moPlanoId,
       cambio,
       setup,
       custoTotal: calc.custoTotalMes,
@@ -358,8 +358,8 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
     setDuracaoSeg(s.duracaoSeg);
     setFerramentaAudio(s.ferramenta as AudioTool);
     setModeloGpt(s.modeloGpt as GptModel);
-    setMoBase(s.moBase);
-    setPctMo(s.pctMo);
+    setQuantidadeNumeros(s.quantidadeNumeros ?? 30);
+    setMoPlanoId(s.moPlanoId ?? "padrao");
     setCambio(s.cambio);
     setSetup(s.setup);
   }
@@ -371,7 +371,8 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
 
   function resetar() {
     setTotalDisparos(5000); setPctAudio(30); setDuracaoSeg(10);
-    setMoBase(2500); setPctMo(40); setCambio(5.80); setSetup(4500);
+    setQuantidadeNumeros(30); setMoPlanoId("padrao");
+    setCambio(5.80); setSetup(4500);
     setFerramentaAudio("elevenlabs"); setModeloGpt("gpt4o-mini");
     setTokensPorMsg(200); setNomeCliente("");
   }
@@ -383,12 +384,12 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
     }
   }
 
+  const moPlanoSel = MO_PLANOS[moPlanoId];
   const breakdown = [
     { item: `${calc.audioLabel} · áudio`, usd: calc.audioUsd, brl: calc.audioUsd * cambio },
     { item: `${GPT_PRICES[modeloGpt].label} · texto`, usd: calc.gpt.totalUsd, brl: calc.custoTextoBrl },
     { item: "n8n (self-hosted)", usd: 0, brl: 0 },
-    { item: `Mão de obra base (fixa)`, usd: null as number | null, brl: moBase },
-    { item: `MO % sobre técnico (${pctMo}%)`, usd: null as number | null, brl: calc.moPercentual },
+    { item: `Mão de obra · ${moPlanoSel.nome} (${quantidadeNumeros} números × ${fmtBRL(moPlanoSel.precoPorNumero)})`, usd: null as number | null, brl: calc.custoMoBrl },
   ];
   const subtotalApiBrl = calc.custoApiBrl;
   const textosMes = totalDisparos * (1 - pctAudio / 100);
