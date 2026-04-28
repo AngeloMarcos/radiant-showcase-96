@@ -670,7 +670,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
               <p className="text-xs uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">Escala por quantidade de números</p>
               <ResponsiveContainer width="100%" height={260}>
                 <LineChart data={sensibilidade.map(s => {
-                  const moAprox = calcularMaoDeObraPorNumero(s.numeros, moPlanoId);
+                  const moAprox = calcularMaoDeObraPorNumero(s.numeros, moPlanoId, moCustomAtivo ? moPrecoCustom : undefined);
                   const tecnicoAprox = Math.max(0, s.custoTotalBrl - moAprox);
                   return {
                     numeros: s.numeros,
