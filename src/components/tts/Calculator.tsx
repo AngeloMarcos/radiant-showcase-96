@@ -215,10 +215,11 @@ export function Calculator() {
     qualidade,
     custoInfraPorNumero,
     moPlanoId,
+    moPrecoOverride: moCustomAtivo ? moPrecoCustom : undefined,
     cambio,
     setup,
     margem: MARGEM_PADRAO,
-  }), [disparosPorNumero, audiosPorNumero, duracaoSeg, tokensPorMsg, modeloGpt, qualidade, custoInfraPorNumero, moPlanoId, cambio, setup]);
+  }), [disparosPorNumero, audiosPorNumero, duracaoSeg, tokensPorMsg, modeloGpt, qualidade, custoInfraPorNumero, moPlanoId, moCustomAtivo, moPrecoCustom, cambio, setup]);
 
   // Margem mínima — alerta visual.
   const margemAbaixoMinima = calc.margemPct / 100 < MARGEM_MINIMA_OBRIGATORIA;
