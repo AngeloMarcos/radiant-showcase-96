@@ -90,7 +90,7 @@ export function Calculator() {
   const [quantidadeNumeros, setQuantidadeNumeros] = useState(30);
   const [moPlanoId, setMoPlanoId] = useState<MoPlanoId>("padrao");
   const [moCustomAtivo, setMoCustomAtivo] = useState(false);
-  const [moPrecoCustom, setMoPrecoCustom] = useState(220); // R$/número customizado
+  const [moPrecoCustom, setMoPrecoCustom] = useState(150); // R$/número customizado
   // ===== Funil de retorno =====
   const [funilCenarioId, setFunilCenarioId] = useState<CenarioFunilId>("provavel");
   const [funilTaxas, setFunilTaxas] = useState<TaxasFunil>(() => {
@@ -1393,7 +1393,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                   ✏️ Ajuste manual · R$ por número
                 </p>
                 <p className="text-xs text-[var(--tts-muted)] font-mono mt-1">
-                  Mexa no slider abaixo ou clique em um preset para sobrescrever o R$/número do plano. Mínimo: {fmtBRL(150)}.
+                  Mexa no slider abaixo ou clique em um preset para sobrescrever o R$/número do plano. Mínimo: {fmtBRL(100)}.
                 </p>
               </div>
               <label className="flex items-center gap-2 text-xs font-mono cursor-pointer shrink-0">
@@ -1412,8 +1412,8 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                 <div className="flex items-center gap-3">
                   <input
                     type="range"
-                    min={150}
-                    max={500}
+                    min={100}
+                    max={400}
                     step={5}
                     value={moPrecoCustom}
                     onChange={(e) => { setMoPrecoCustom(Number(e.target.value)); if (!moCustomAtivo) setMoCustomAtivo(true); }}
@@ -1423,11 +1423,11 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                     <span className="text-[var(--tts-muted)]">R$</span>
                     <input
                       type="number"
-                      min={150}
+                      min={100}
                       max={2000}
                       step={5}
                       value={moPrecoCustom}
-                      onChange={(e) => { setMoPrecoCustom(Math.max(150, Number(e.target.value) || 150)); if (!moCustomAtivo) setMoCustomAtivo(true); }}
+                      onChange={(e) => { setMoPrecoCustom(Math.max(100, Number(e.target.value) || 100)); if (!moCustomAtivo) setMoCustomAtivo(true); }}
                       className="w-20 bg-transparent border border-[var(--tts-border)] rounded px-2 py-1 text-right font-bold"
                       style={{ color: "var(--tts-orange)" }}
                     />
@@ -1438,7 +1438,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                   <div className="tts-card p-2">
                     <p className="text-[9px] uppercase text-[var(--tts-muted)]">Total MO/mês</p>
                     <p className="font-bold text-base" style={{ color: "var(--tts-orange)" }}>
-                      {fmtBRL(quantidadeNumeros * Math.max(moPrecoCustom, 150))}
+                      {fmtBRL(quantidadeNumeros * Math.max(moPrecoCustom, 100))}
                     </p>
                   </div>
                   <div className="tts-card p-2">
@@ -1465,7 +1465,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {[150, 180, 220, 280, 320, 400].map(v => (
+                  {[100, 125, 150, 175, 200, 250].map(v => (
                     <button
                       key={v}
                       onClick={() => setMoPrecoCustom(v)}

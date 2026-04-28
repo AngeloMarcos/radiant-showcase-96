@@ -39,7 +39,7 @@ export const ELEVEN_PLANS: ElevenPlan[] = [
 // para operação de campanha política com automação, GPT e áudio ElevenLabs.
 // O valor inclui: setup, ajustes de fluxo, monitoramento diário,
 // suporte durante a campanha e otimização de prompts/voz.
-export const MO_PRECO_MINIMO_POR_NUMERO = 150;
+export const MO_PRECO_MINIMO_POR_NUMERO = 100;
 export const MO_PRECO_LEGADO_POR_NUMERO = 100; // referência histórica para comparativo
 
 export type MoPlanoId = "basico" | "padrao" | "premium";
@@ -58,7 +58,7 @@ export const MO_PLANOS: Record<MoPlanoId, MoPlano> = {
     id: "basico",
     nome: "Básico",
     rotulo: "Básico (mínimo viável)",
-    precoPorNumero: 150,
+    precoPorNumero: 100,
     descricao: "Operação enxuta",
     inclui: ["Setup inicial", "Monitoramento básico", "Suporte horário comercial"],
   },
@@ -66,7 +66,7 @@ export const MO_PLANOS: Record<MoPlanoId, MoPlano> = {
     id: "padrao",
     nome: "Padrão",
     rotulo: "Padrão (recomendado)",
-    precoPorNumero: 220,
+    precoPorNumero: 150,
     descricao: "Acompanhamento ativo",
     inclui: [
       "Setup completo",
@@ -80,7 +80,7 @@ export const MO_PLANOS: Record<MoPlanoId, MoPlano> = {
     id: "premium",
     nome: "Premium",
     rotulo: "Premium (máximo acompanhamento)",
-    precoPorNumero: 320,
+    precoPorNumero: 200,
     descricao: "Operação assistida",
     inclui: [
       "Setup premium",
