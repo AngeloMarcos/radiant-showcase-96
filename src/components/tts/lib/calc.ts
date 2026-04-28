@@ -109,6 +109,58 @@ export function calcularPercentualMaoDeObra(
   return total > 0 ? (maoDeObra / total) * 100 : 0;
 }
 
+// ============= ESCALA POR NÚMERO =============
+// Modo proporcional: tudo é derivado da quantidade de números ativos.
+export interface EscalaPorNumeroInput {
+  quantidadeNumeros: number;
+  disparosPorNumero: number;     // disparos/mês por número
+  audiosPorNumero: number;       // dos disparos, quantos são áudio (resto é texto)
+  duracaoMediaSeg: number;
+  tokensPorMsg: number;
+  custoInfraPorNumero: number;   // BRL/número (infra, gateway, etc.)
+}
+
+export interface EscalaPorNumeroResult {
+  disparosTotais: number;
+  audiosTotais: number;
+  textosTotais: number;
+  minutosTotaisAudio: number;
+  tokensTotaisTexto: number;
+  pctAudioDerivado: number;      // % derivado para a UI manual mostrar
+  custoInfraTotalBrl: number;
+  explicacao: string;
+}
+
+export function calcEscalaPorNumero(i: EscalaPorNumeroInput): EscalaPorNumeroResult {
+  const q = Math.max(0, i.quantidadeNumeros);
+  const dpn = Math.max(0, i.disparosPorNumero);
+  const apn = Math.min(Math.max(0, i.audiosPorNumero), dpn); // áudios não excedem disparos
+  const disparosTotais = q * dpn;
+  const audiosTotais = q * apn;
+  const textosTotais = Math.max(0, disparosTotais - audiosTotais);
+  const minutosTotaisAudio = (audiosTotais * Math.max(0, i.duracaoMediaSeg)) / 60;
+  const tokensTotaisTexto = textosTotais * Math.max(0, i.tokensPorMsg);
+  const pctAudioDerivado = dpn > 0 ? (apn / dpn) * 100 : 0;
+  const custoInfraTotalBrl = q * Math.max(0, i.custoInfraPorNumero);
+
+  const explicacao =
+    `${q} números × ${dpn} disparos = ${disparosTotais.toLocaleString("pt-BR")} disparos/mês · ` +
+    `${q} × ${apn} áudios = ${audiosTotais.toLocaleString("pt-BR")} áudios ` +
+    `(${pctAudioDerivado.toFixed(0)}%) · ` +
+    `${minutosTotaisAudio.toFixed(1)} min de áudio.`;
+
+  return {
+    disparosTotais,
+    audiosTotais,
+    textosTotais,
+    minutosTotaisAudio,
+    tokensTotaisTexto,
+    pctAudioDerivado,
+    custoInfraTotalBrl,
+    explicacao,
+  };
+}
+
 // ============= GPT =============
 
 export const GPT_PRICES = {
