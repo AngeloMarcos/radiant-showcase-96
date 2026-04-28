@@ -81,8 +81,8 @@ export function Calculator() {
   const [totalDisparos, setTotalDisparos] = useState(5000);
   const [pctAudio, setPctAudio] = useState(30);
   const [duracaoSeg, setDuracaoSeg] = useState(10);
-  const [moBase, setMoBase] = useState(2500);
-  const [pctMo, setPctMo] = useState(40);
+  const [quantidadeNumeros, setQuantidadeNumeros] = useState(30);
+  const [moPlanoId, setMoPlanoId] = useState<MoPlanoId>("padrao");
   const [cambio, setCambio] = useState(5.80);
   const [setup, setSetup] = useState(4500);
   const [ferramentaAudio, setFerramentaAudio] = useState<AudioTool>("elevenlabs");
