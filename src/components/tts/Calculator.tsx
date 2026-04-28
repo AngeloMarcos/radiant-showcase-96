@@ -221,6 +221,22 @@ export function Calculator() {
   const margemAbaixoMinima = calc.margemPct / 100 < MARGEM_MINIMA_OBRIGATORIA;
   const precoMinimoSeguro = aplicarPisoMargem(calc.custoTotalMes, calc.precoVenda);
 
+  // ===== Condição de campanha (pagamento diferido da MO) =====
+  const campanha = useMemo(() => calcCondicaoCampanha({
+    custoTecnicoBrl: calc.custoTecnicoBrl,
+    maoDeObraBrl: calc.custoMoBrl,
+    precoVenda: planoRecomendado.preco, // ancora no plano recomendado
+    pctEntradaMO,
+    reservaMinima,
+  }), [calc.custoTecnicoBrl, calc.custoMoBrl, planoRecomendado.preco, pctEntradaMO, reservaMinima]);
+
+  const cenariosCampanha = useMemo(() => calcCenariosCampanha({
+    custoTecnicoBrl: calc.custoTecnicoBrl,
+    maoDeObraBrl: calc.custoMoBrl,
+    precoVenda: planoRecomendado.preco,
+    reservaMinima,
+  }), [calc.custoTecnicoBrl, calc.custoMoBrl, planoRecomendado.preco, reservaMinima]);
+
   // ===== Ramp-up (crescimento gradual) =====
   const [rampAtivo, setRampAtivo] = useState(false);
   const [rampMeses, setRampMeses] = useState(6);
