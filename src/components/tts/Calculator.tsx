@@ -540,6 +540,194 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
           </div>
         </header>
 
+        {/* ===== DASHBOARD EXECUTIVO (estilo Power BI) ===== */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <SectionTitle
+              icon={<TrendingUp className="size-4" />}
+              title="Painel executivo"
+              hint="Visão consolidada da proposta — atualiza em tempo real"
+            />
+            <span className="tts-badge tts-badge-orange">Plano recomendado: {planoRecomendado.nome}</span>
+          </div>
+
+          {/* KPIs principais */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: "Tecnologia e consumo", value: fmtBRL(calc.custoTecnicoBrl), hint: "APIs + infraestrutura", color: "var(--tts-cyan)" },
+              { label: "Operação e inteligência", value: fmtBRL(calc.custoMoBrl), hint: `${quantidadeNumeros} números · ${MO_PLANOS[moPlanoId].nome}`, color: "var(--tts-orange)" },
+              { label: "Investimento total", value: fmtBRL(planoRecomendado.preco), hint: `+ ${fmtBRL(planoRecomendado.setup)} setup`, color: "var(--tts-text)" },
+              { label: "Lucro estimado", value: fmtBRL(planoRecomendado.lucroMes), hint: `Margem ${(planoRecomendado.margemReal * 100).toFixed(0)}%`, color: "var(--tts-green)" },
+              { label: "Pago AGORA", value: modoCampanha ? fmtBRL(campanha.valorPagoAgora) : fmtBRL(planoRecomendado.preco), hint: modoCampanha ? `${campanha.percentualPagoAgora.toFixed(0)}% do total` : "Pagamento integral", color: "var(--tts-orange)" },
+              { label: "Pago DEPOIS", value: modoCampanha ? fmtBRL(campanha.valorPagoDepois) : fmtBRL(0), hint: modoCampanha ? `${campanha.percentualPagoDepois.toFixed(0)}% — saldo` : "—", color: "var(--tts-cyan)" },
+              { label: "Capacidade", value: fmtNum(disparosEfetivos), hint: "disparos/mês", color: "var(--tts-text)" },
+              { label: "Quantidade de números", value: String(quantidadeNumeros), hint: `${fmtNum(calc.minutosMes, 0)} min de áudio`, color: "var(--tts-cyan)" },
+            ].map((k) => (
+              <div key={k.label} className="tts-card p-4">
+                <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono">{k.label}</p>
+                <p className="font-mono text-2xl font-bold mt-1" style={{ color: k.color }}>{k.value}</p>
+                <p className="text-[10px] text-[var(--tts-muted)] font-mono mt-1">{k.hint}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Texto comercial explicativo */}
+          <div className="tts-card p-5 !border-[var(--tts-orange)]/40">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="font-display font-bold mb-2 text-[var(--tts-orange)]">Por que este investimento?</p>
+                <p className="text-[var(--tts-muted)] leading-relaxed">
+                  O investimento é dividido entre <span className="text-[var(--tts-text)] font-bold">tecnologia</span> (APIs de IA que geram texto e voz) e <span className="text-[var(--tts-text)] font-bold">operação especializada</span> (estratégia, monitoramento e otimização contínua). A API não substitui o trabalho — ela é a ferramenta. O resultado depende de quem opera.
+                </p>
+              </div>
+              <div>
+                <p className="font-display font-bold mb-2 text-[var(--tts-orange)]">Condição de pré-campanha</p>
+                <p className="text-[var(--tts-muted)] leading-relaxed">
+                  {modoCampanha
+                    ? "A entrada cobre os custos imediatos e parte da operação. O saldo é programado para quando a verba de campanha for liberada — assim você começa agora sem comprometer a estrutura."
+                    : "Ative o modo campanha para parcelar parte da operação e começar com entrada reduzida, mantendo todos os custos técnicos cobertos."}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Gráficos do dashboard */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* A — Donut: composição do preço */}
+            <div className="tts-card p-4">
+              <p className="text-xs uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">Composição do preço total</p>
+              <ResponsiveContainer width="100%" height={260}>
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: "APIs (GPT + Áudio)", value: calc.custoApiBrl },
+                      { name: "Infraestrutura", value: calc.custoInfraBrl },
+                      { name: "Meu trabalho", value: calc.custoMoBrl },
+                      { name: "Margem", value: Math.max(0, planoRecomendado.preco - calc.custoTotalMes) },
+                    ].filter(d => d.value > 0)}
+                    dataKey="value"
+                    innerRadius={60}
+                    outerRadius={95}
+                    paddingAngle={2}
+                    label={(e: any) => `${((e.value / planoRecomendado.preco) * 100).toFixed(0)}%`}
+                    labelLine={false}
+                  >
+                    <Cell fill={CHART_COLORS.cyan} />
+                    <Cell fill={CHART_COLORS.green} />
+                    <Cell fill={CHART_COLORS.orange} />
+                    <Cell fill={CHART_COLORS.gold} />
+                  </Pie>
+                  <Tooltip formatter={(v: number) => fmtBRL(v)} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* B — Barras empilhadas: divisão do pagamento */}
+            <div className="tts-card p-4">
+              <p className="text-xs uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">
+                Divisão do pagamento {modoCampanha ? "(modo campanha)" : ""}
+              </p>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart
+                  data={[
+                    {
+                      n: "Agora",
+                      tecnico: campanha.custoTecnicoTotal,
+                      moAgora: modoCampanha ? campanha.entradaMaoDeObra : campanha.maoDeObraTotal,
+                      margem: campanha.margemBrl,
+                      moDepois: 0,
+                    },
+                    {
+                      n: "Depois",
+                      tecnico: 0,
+                      moAgora: 0,
+                      margem: 0,
+                      moDepois: modoCampanha ? campanha.saldoMaoDeObra : 0,
+                    },
+                  ]}
+                >
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="n" fontSize={11} />
+                  <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} fontSize={10} />
+                  <Tooltip formatter={(v: number) => fmtBRL(v)} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="tecnico" name="Técnico (APIs+infra)" stackId="a" fill={CHART_COLORS.cyan} />
+                  <Bar dataKey="moAgora" name="Operação (parte agora)" stackId="a" fill={CHART_COLORS.orange} />
+                  <Bar dataKey="margem" name="Margem" stackId="a" fill={CHART_COLORS.gold} />
+                  <Bar dataKey="moDepois" name="Operação (saldo)" stackId="a" fill={CHART_COLORS.purple} fillOpacity={0.7} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* C — Linha: escala por quantidade de números */}
+            <div className="tts-card p-4">
+              <p className="text-xs uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">Escala por quantidade de números</p>
+              <ResponsiveContainer width="100%" height={260}>
+                <LineChart data={sensibilidade.map(s => {
+                  const moAprox = calcularMaoDeObraPorNumero(s.numeros, moPlanoId);
+                  const tecnicoAprox = Math.max(0, s.custoTotalBrl - moAprox);
+                  return {
+                    numeros: s.numeros,
+                    "Técnico": tecnicoAprox,
+                    "Meu trabalho": moAprox,
+                    "Preço final": s.precoVendaBrl,
+                  };
+                })}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="numeros" fontSize={11} />
+                  <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} fontSize={10} />
+                  <Tooltip formatter={(v: number) => fmtBRL(v)} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Line type="monotone" dataKey="Técnico" stroke={CHART_COLORS.cyan} strokeWidth={2} dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="Meu trabalho" stroke={CHART_COLORS.orange} strokeWidth={2} dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="Preço final" stroke={CHART_COLORS.gold} strokeWidth={3} dot={{ r: 5 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* D — Cascata (waterfall): formação do preço */}
+            <div className="tts-card p-4">
+              <p className="text-xs uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">Formação do preço final (cascata)</p>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart
+                  data={(() => {
+                    const gpt = calc.custoTextoBrl;
+                    const eleven = calc.custoAudioBrl;
+                    const infra = calc.custoInfraBrl;
+                    const trab = calc.custoMoBrl;
+                    const margem = Math.max(0, planoRecomendado.preco - calc.custoTotalMes);
+                    let acc = 0;
+                    const step = (label: string, valor: number) => {
+                      const base = acc; acc += valor;
+                      return { etapa: label, base, valor };
+                    };
+                    return [
+                      step("GPT", gpt),
+                      step("ElevenLabs", eleven),
+                      step("Infra", infra),
+                      step("Meu trabalho", trab),
+                      step("Margem", margem),
+                      { etapa: "Total", base: 0, valor: planoRecomendado.preco },
+                    ];
+                  })()}
+                >
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="etapa" fontSize={10} />
+                  <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} fontSize={10} />
+                  <Tooltip formatter={(v: number, name: string) => name === "valor" ? fmtBRL(v) : ""} />
+                  <Bar dataKey="base" stackId="w" fill="transparent" />
+                  <Bar dataKey="valor" stackId="w">
+                    {[CHART_COLORS.cyan, CHART_COLORS.cyan, CHART_COLORS.green, CHART_COLORS.orange, CHART_COLORS.gold, CHART_COLORS.purple].map((c, i) => (
+                      <Cell key={i} fill={c} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </section>
+
         {/* Cenários */}
         <section>
           <SectionTitle icon={<Sparkles className="size-4" />} title="Cenários rápidos" hint="Aplique presets aos sliders" />
