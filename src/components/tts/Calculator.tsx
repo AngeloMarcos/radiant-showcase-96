@@ -1107,7 +1107,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                             mes: m.mes,
                             audios: Math.round(m.audiosMes),
                             textos: Math.round(m.disparos - m.audiosMes),
-                            moPct: Math.round(m.pctMo),
+                            numeros: m.numeros,
                           }))}
                           margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                         >
