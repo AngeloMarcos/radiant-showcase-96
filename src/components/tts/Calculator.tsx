@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   calcMinutos, calcElevenLabs, calcPlayht, calcPolly, calcGpt, calcVenda,
   calcPlanos, calcAnual, GPT_PRICES, fmtBRL, fmtUSD, fmtNum, type GptModel,
