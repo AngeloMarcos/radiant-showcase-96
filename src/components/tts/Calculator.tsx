@@ -115,6 +115,12 @@ export function Calculator() {
   const [salvo, setSalvo] = useState(false);
   const [apresentacaoAberta, setApresentacaoAberta] = useState(false);
 
+  // ===== Modo Campanha (pagamento diferido da MO) =====
+  const [modoCampanha, setModoCampanha] = useState(false);
+  const [pctEntradaMO, setPctEntradaMO] = useState(50);
+  const [reservaMinima, setReservaMinima] = useState(0);
+  const [presetCampanha, setPresetCampanha] = useState<"30/70" | "40/60" | "50/50" | "60/40" | "custom">("50/50");
+
   // ===== Escala por número (modo proporcional) =====
   // Quando ativo, disparos/pctAudio/infra são DERIVADOS da qtd de números.
   const escala = useMemo(() => calcEscalaPorNumero({
