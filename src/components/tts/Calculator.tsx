@@ -12,8 +12,9 @@ import {
 import {
   Calculator as CalcIcon, Mic, MessageSquare, Wrench, TrendingUp,
   AlertTriangle, Lightbulb, Copy, Check, Sparkles, Sun, Moon,
-  RotateCcw, Save, Clock, Printer,
+  RotateCcw, Save, Clock, Printer, FileDown,
 } from "lucide-react";
+import { jsPDF } from "jspdf";
 
 type AudioTool = "elevenlabs" | "playht" | "polly" | "comparar";
 
