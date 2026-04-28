@@ -2,7 +2,8 @@ import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   calcMinutos, calcElevenLabs, calcPlayht, calcPolly, calcGpt, calcVenda,
-  calcPlanos, calcAnual, GPT_PRICES, fmtBRL, fmtUSD, fmtNum, type GptModel,
+  calcPlanos, calcAnual, calcRampUp, GPT_PRICES, fmtBRL, fmtUSD, fmtNum,
+  type GptModel, type RampMes,
 } from "./lib/calc";
 import { SliderInput } from "./ui/SliderInput";
 import { StatCard } from "./ui/StatCard";
@@ -137,6 +138,35 @@ export function Calculator() {
 
   const planos = useMemo(() => calcPlanos(calc.precoVenda, setup), [calc.precoVenda, setup]);
   const anual = useMemo(() => calcAnual(calc.custoTotalMes, calc.precoVenda, setup), [calc.custoTotalMes, calc.precoVenda, setup]);
+
+  // ===== Ramp-up (crescimento gradual) =====
+  const [rampAtivo, setRampAtivo] = useState(false);
+  const [rampMeses, setRampMeses] = useState(6);
+  const [rampDisparosIni, setRampDisparosIni] = useState(1500);
+  const [rampPctAudioIni, setRampPctAudioIni] = useState(10);
+  const [rampPctMoIni, setRampPctMoIni] = useState(15);
+
+  const rampData = useMemo<RampMes[]>(() => {
+    if (!rampAtivo) return [];
+    return calcRampUp({
+      meses: rampMeses,
+      disparosInicial: rampDisparosIni,
+      disparosFinal: totalDisparos,
+      pctAudioInicial: rampPctAudioIni,
+      pctAudioFinal: pctAudio,
+      duracaoSeg,
+      tokensPorMsg,
+      modeloGpt,
+      ferramenta: ferramentaAudio === "comparar" ? "elevenlabs" : ferramentaAudio,
+      moBase,
+      pctMoInicial: rampPctMoIni,
+      pctMoFinal: pctMo,
+      cambio,
+      setup,
+    });
+  }, [rampAtivo, rampMeses, rampDisparosIni, rampPctAudioIni, rampPctMoIni,
+      totalDisparos, pctAudio, duracaoSeg, tokensPorMsg, modeloGpt,
+      ferramentaAudio, moBase, pctMo, cambio, setup]);
 
   // ===== Gráfico de barras =====
   const chartData = useMemo(() => {
@@ -783,6 +813,147 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
             )}
           </section>
         )}
+
+        {/* Ramp-up: crescimento gradual */}
+        <section>
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <SectionTitle
+              icon={<TrendingUp className="size-4" />}
+              title="Crescimento gradual (ramp-up)"
+              hint="Volume e MO crescem mês a mês até a meta"
+            />
+            <button onClick={() => setRampAtivo(v => !v)} className="tts-btn !text-xs">
+              {rampAtivo ? "Desativar" : "Ativar"} ramp-up
+            </button>
+          </div>
+
+          {rampAtivo && (
+            <div className="space-y-6 tts-fade-in">
+              <div className="tts-card p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-5">
+                <SliderInput
+                  label="Duração do ramp"
+                  value={rampMeses}
+                  onChange={setRampMeses}
+                  min={2} max={12} suffix="meses"
+                />
+                <SliderInput
+                  label="Disparos no mês 1"
+                  value={rampDisparosIni}
+                  onChange={setRampDisparosIni}
+                  min={500} max={Math.max(500, totalDisparos)} step={500}
+                  hint={`Meta no mês ${rampMeses}: ${fmtNum(totalDisparos)}`}
+                />
+                <SliderInput
+                  label="% Áudio no mês 1"
+                  value={rampPctAudioIni}
+                  onChange={setRampPctAudioIni}
+                  min={0} max={100} suffix="%"
+                  hint={`Meta: ${pctAudio}%`}
+                />
+                <SliderInput
+                  label="% MO no mês 1"
+                  value={rampPctMoIni}
+                  onChange={setRampPctMoIni}
+                  min={0} max={100} suffix="%"
+                  hint={`Meta: ${pctMo}% · = ${fmtBRL(moBase * rampPctMoIni / 100)}`}
+                />
+              </div>
+
+              {rampData.length > 0 && (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <StatCard
+                      label="Receita acumulada"
+                      value={fmtBRL(rampData[rampData.length - 1].receitaAcum)}
+                      sub={`em ${rampMeses} meses`}
+                      accent="green"
+                    />
+                    <StatCard
+                      label="Custo acumulado"
+                      value={fmtBRL(rampData[rampData.length - 1].custoAcum)}
+                      sub={`inclui ${fmtBRL(setup)} setup`}
+                      accent="cyan"
+                    />
+                    <StatCard
+                      label="Lucro acumulado"
+                      value={fmtBRL(rampData[rampData.length - 1].lucroAcum)}
+                      sub="do ramp-up"
+                      accent="orange"
+                      large
+                    />
+                    <StatCard
+                      label="Mês de venda final"
+                      value={fmtBRL(rampData[rampData.length - 1].precoVenda)}
+                      sub={`vs mês 1: ${fmtBRL(rampData[0].precoVenda)}`}
+                      accent="gold"
+                    />
+                  </div>
+
+                  <div className="tts-card p-4 md:p-6">
+                    <div className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">
+                      Evolução mensal — receita, custo e lucro
+                    </div>
+                    <div style={{ width: "100%", height: 300 }}>
+                      <ResponsiveContainer>
+                        <BarChart data={rampData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#1a2235" />
+                          <XAxis dataKey="mes" stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 12 }}
+                            tickFormatter={(v) => `M${v}`} />
+                          <YAxis stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 11 }}
+                            tickFormatter={(v) => "R$" + (v >= 1000 ? (v / 1000).toFixed(1) + "k" : v.toFixed(0))} />
+                          <Tooltip
+                            contentStyle={{ background: "#0d1119", border: "1px solid #1a2235", borderRadius: 8, fontSize: 12, color: "#d8e4f5" }}
+                            formatter={(v: number) => fmtBRL(v)}
+                            labelFormatter={(l) => `Mês ${l}`}
+                          />
+                          <Legend wrapperStyle={{ fontSize: 12 }} />
+                          <Bar dataKey="custoTotal" fill={CHART_COLORS.purple} name="Custo" />
+                          <Bar dataKey="receita" fill={CHART_COLORS.cyan} name="Receita" />
+                          <Bar dataKey="lucro" fill={CHART_COLORS.orange} name="Lucro" radius={[6, 6, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="tts-card overflow-x-auto">
+                    <table className="w-full text-xs font-mono">
+                      <thead>
+                        <tr className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] border-b border-[var(--tts-border)]">
+                          <th className="text-left p-3">Mês</th>
+                          <th className="text-right p-3">Disparos</th>
+                          <th className="text-right p-3">% Áudio</th>
+                          <th className="text-right p-3">MO</th>
+                          <th className="text-right p-3">Custo</th>
+                          <th className="text-right p-3">Venda</th>
+                          <th className="text-right p-3">Lucro</th>
+                          <th className="text-right p-3">Lucro acum.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rampData.map(m => (
+                          <tr key={m.mes} className="border-b border-[var(--tts-border)]/60">
+                            <td className="p-3">
+                              Mês {m.mes}
+                              {m.mes === 1 && <span className="ml-2 tts-badge tts-badge-warn">Setup</span>}
+                              {m.mes === rampMeses && <span className="ml-2 tts-badge tts-badge-orange">Meta</span>}
+                            </td>
+                            <td className="p-3 text-right">{fmtNum(m.disparos)}</td>
+                            <td className="p-3 text-right">{m.pctAudio.toFixed(0)}%</td>
+                            <td className="p-3 text-right">{fmtBRL(m.custoMoBrl)} <span className="text-[var(--tts-muted)]">({m.pctMo.toFixed(0)}%)</span></td>
+                            <td className="p-3 text-right">{fmtBRL(m.custoTotal)}</td>
+                            <td className="p-3 text-right">{fmtBRL(m.precoVenda)}</td>
+                            <td className="p-3 text-right" style={{ color: "var(--tts-green)" }}>{fmtBRL(m.lucro)}</td>
+                            <td className="p-3 text-right" style={{ color: "var(--tts-green)" }}>{fmtBRL(m.lucroAcum)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </section>
 
         {/* Tabela anual */}
         <section>
