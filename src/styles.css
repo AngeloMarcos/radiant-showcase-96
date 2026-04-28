@@ -146,25 +146,29 @@
 
 /* ============ TTS CALCULATOR SCOPED STYLES ============ */
 .tts-app {
-  /* Tema escuro MentoArk 2025 — Violet → Indigo → Blue */
-  --tts-bg: #05050f;            /* deep space */
+  /* === MentoArk 2025 — Violet → Indigo → Blue === */
+  --tts-bg: #05050f;             /* deep space */
   --tts-surface: #0d0d1f;        /* card */
-  --tts-surface-2: #14142b;      /* card elevated */
-  --tts-border: #221a3d;         /* violet hint */
-  --tts-border-strong: #3a2a6b;
-  --tts-orange: #8b5cf6;         /* MentoArk Violet 500 (cor primária de destaque) */
+  --tts-surface-2: #15152e;      /* card elevated (violet-tint) */
+  --tts-border: rgba(139,92,246,.18);   /* violet 500 @ 18% (border oficial) */
+  --tts-border-strong: rgba(139,92,246,.45);
+  /* "orange" mantém o nome da var (legado) mas agora é o Violet — cor primária */
+  --tts-orange: #8b5cf6;          /* Violet 500 */
   --tts-orange-dim: rgba(139,92,246,.15);
-  --tts-cyan: #3b82f6;           /* MentoArk Blue 500 */
+  --tts-cyan: #3b82f6;            /* Blue 500 */
   --tts-cyan-dim: rgba(59,130,246,.15);
-  --tts-green: #10b981;          /* emerald */
+  --tts-purple: #6366f1;          /* Indigo 500 */
+  --tts-green: #10b981;
   --tts-green-dim: rgba(16,185,129,.15);
   --tts-red: #ef4444;
   --tts-red-dim: rgba(239,68,68,.15);
   --tts-gold: #f59e0b;
   --tts-gold-dim: rgba(245,158,11,.15);
-  --tts-text: #f5f3ff;           /* violet-50 */
+  --tts-text: #f5f3ff;            /* violet-50 */
   --tts-muted: #8b8ba7;
-  --tts-purple: #6366f1;         /* MentoArk Indigo 500 */
+  /* Gradient assinatura MentoArk */
+  --tts-gradient: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
+  --tts-glow: 0 0 40px rgba(139,92,246,.35);
   background: var(--tts-bg);
   color: var(--tts-text);
   font-family: 'Inter', system-ui, sans-serif;
