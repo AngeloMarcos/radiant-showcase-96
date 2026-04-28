@@ -1408,8 +1408,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
             </div>
 
             {/* Sempre visível — interagir aplica automaticamente */}
-            {(
-              <div className="space-y-3">
+            <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <input
                     type="range"
