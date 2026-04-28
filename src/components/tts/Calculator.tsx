@@ -620,6 +620,100 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
           </div>
         </section>
 
+        {/* Áudio ElevenLabs — seção dedicada */}
+        {ferramentaAudio === "elevenlabs" && (
+          <section>
+            <SectionTitle
+              icon={<Mic className="size-4" />}
+              title="Áudio ElevenLabs"
+              hint={`Qualidade: ${qualidade === "good" ? "Bom" : qualidade === "professional" ? "Profissional" : "Estúdio"}`}
+            />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Card do plano recomendado */}
+              <div className="tts-card p-5 lg:col-span-1 !border-[var(--tts-orange)]">
+                <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-1">
+                  Plano recomendado
+                </p>
+                <h3 className="font-display text-2xl font-bold">{calc.eleven.plano.nome}</h3>
+                <p className="text-xs text-[var(--tts-muted)] font-mono mb-3">
+                  {calc.eleven.plano.qualidadeLabel}
+                </p>
+                <div className="font-mono text-3xl font-bold" style={{ color: "var(--tts-orange)" }}>
+                  {fmtUSD(calc.eleven.totalUsd)}
+                  <span className="text-xs text-[var(--tts-muted)] font-normal">/mês</span>
+                </div>
+                <p className="text-xs text-[var(--tts-muted)] font-mono mt-1">
+                  ≈ {fmtBRL(calc.eleven.totalUsd * cambio)} (câmbio {cambio.toFixed(2)})
+                </p>
+
+                <div className="mt-4 space-y-1.5 text-xs font-mono">
+                  <Row k="Plano base"          v={`${fmtUSD(calc.eleven.plano.fixoUsd)}/mês`} />
+                  <Row k="Minutos inclusos"    v={`${fmtNum(calc.eleven.minutosInclusos)} min`} />
+                  <Row k="Minutos necessários" v={`${fmtNum(calc.eleven.minutosNecessarios, 1)} min`} />
+                  <Row k="Excedente"           v={`${fmtNum(calc.eleven.excedenteMin, 1)} min`} />
+                  <Row k="Custo excedente"     v={fmtUSD(calc.eleven.excedenteUsd)} />
+                  <div className="border-t border-[var(--tts-border)] pt-1.5 mt-1.5 flex justify-between font-bold">
+                    <span>Total ElevenLabs</span>
+                    <span style={{ color: "var(--tts-orange)" }}>{fmtUSD(calc.eleven.totalUsd)}/mês</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Comparativo entre planos elegíveis */}
+              <div className="tts-card p-5 lg:col-span-2 overflow-hidden">
+                <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">
+                  Comparativo de planos · qualidade compatível
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs font-mono">
+                    <thead>
+                      <tr className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] border-b border-[var(--tts-border)]">
+                        <th className="text-left p-2">Plano</th>
+                        <th className="text-right p-2">Fixo</th>
+                        <th className="text-right p-2">Inclusos</th>
+                        <th className="text-right p-2">Excedente</th>
+                        <th className="text-right p-2">Custo exc.</th>
+                        <th className="text-right p-2">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {calc.eleven.comparativo.map(r => {
+                        const isReco = r.plano.id === calc.eleven.plano.id;
+                        return (
+                          <tr
+                            key={r.plano.id}
+                            className={`border-b border-[var(--tts-border)]/60 ${isReco ? "bg-[var(--tts-surface-2)]" : ""}`}
+                          >
+                            <td className="p-2">
+                              <span className={isReco ? "font-bold text-[var(--tts-orange)]" : ""}>
+                                {r.plano.nome}
+                              </span>
+                              {isReco && <span className="ml-1 text-[9px]">★</span>}
+                            </td>
+                            <td className="p-2 text-right">{fmtUSD(r.plano.fixoUsd)}</td>
+                            <td className="p-2 text-right">{fmtNum(r.minutosInclusos)} min</td>
+                            <td className="p-2 text-right">
+                              {r.excedenteMin > 0
+                                ? <span className="text-[var(--tts-gold)]">{fmtNum(r.excedenteMin, 1)} min</span>
+                                : <span className="text-[var(--tts-green)]">—</span>}
+                            </td>
+                            <td className="p-2 text-right">{fmtUSD(r.excedenteUsd)}</td>
+                            <td className="p-2 text-right font-bold">{fmtUSD(r.totalUsd)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-[10px] text-[var(--tts-muted)] font-mono mt-3">
+                  Recomendado = plano mais barato que cobre o volume sem excedente.
+                  Se nenhum cobre, é escolhido o de menor custo total (fixo + excedente).
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Breakdown */}
         <section>
           <SectionTitle icon={<MessageSquare className="size-4" />} title="Breakdown detalhado" />
