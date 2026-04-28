@@ -376,7 +376,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
   }
 
   const breakdown = [
-    { item: `${calc.audioLabel} · áudio`, usd: calc.audioUsd, brl: calc.audioAudioBrlOpt ?? calc.custoAudioBrl },
+    { item: `${calc.audioLabel} · áudio`, usd: calc.audioUsd, brl: calc.audioUsd * cambio },
     { item: `${GPT_PRICES[modeloGpt].label} · texto`, usd: calc.gpt.totalUsd, brl: calc.custoTextoBrl },
     { item: "n8n (self-hosted)", usd: 0, brl: 0 },
     { item: `Mão de obra base (fixa)`, usd: null as number | null, brl: moBase },
