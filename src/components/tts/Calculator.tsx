@@ -167,7 +167,8 @@ export function Calculator() {
     const custoTecnicoBrl = custoApiBrl + custoInfraBrl;
 
     // Mão de obra: por número de WhatsApp ativo, conforme plano selecionado
-    const custoMoBrl = calcularMaoDeObraPorNumero(quantidadeNumeros, moPlanoId);
+    const moOverride = moCustomAtivo ? moPrecoCustom : undefined;
+    const custoMoBrl = calcularMaoDeObraPorNumero(quantidadeNumeros, moPlanoId, moOverride);
     const custoMoLegadoBrl = quantidadeNumeros * MO_PRECO_LEGADO_POR_NUMERO;
     const moPorPlano: Record<MoPlanoId, number> = {
       basico:  calcularMaoDeObraPorNumero(quantidadeNumeros, "basico"),
