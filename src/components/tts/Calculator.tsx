@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   calcMinutos, calcElevenLabs, calcPlayht, calcPolly, calcGpt, calcVenda,
   calcPlanos, calcAnual, calcRampUp, GPT_PRICES, fmtBRL, fmtUSD, fmtNum,
-  type GptModel, type RampMes,
+  type GptModel, type RampMes, type AudioQuality,
 } from "./lib/calc";
 import { SliderInput } from "./ui/SliderInput";
 import { StatCard } from "./ui/StatCard";
@@ -84,6 +84,7 @@ export function Calculator() {
   const [cambio, setCambio] = useState(5.80);
   const [setup, setSetup] = useState(4500);
   const [ferramentaAudio, setFerramentaAudio] = useState<AudioTool>("elevenlabs");
+  const [qualidade, setQualidade] = useState<AudioQuality>("good");
   const [modeloGpt, setModeloGpt] = useState<GptModel>("gpt4o-mini");
   const [tokensPorMsg, setTokensPorMsg] = useState(200);
   const [mostrarAnual, setMostrarAnual] = useState(false);
@@ -103,7 +104,7 @@ export function Calculator() {
   // ===== Cálculos memorizados =====
   const calc = useMemo(() => {
     const { audiosMes, minutosMes } = calcMinutos(totalDisparos, pctAudio, duracaoSeg);
-    const eleven = calcElevenLabs(minutosMes);
+    const eleven = calcElevenLabs(minutosMes, qualidade);
     const playht = calcPlayht(minutosMes);
     const polly = calcPolly(minutosMes);
     const gpt = calcGpt(totalDisparos, pctAudio, tokensPorMsg, modeloGpt);
@@ -119,10 +120,19 @@ export function Calculator() {
       ferramentaAudio === "polly"      ? "Amazon Polly" :
       `ElevenLabs ${eleven.plano.nome} (referência)`;
 
+    // Custos técnicos (APIs convertidas para BRL)
+    const custoAudioBrl = audioUsd * cambio;
+    const custoTextoBrl = gpt.totalUsd * cambio;
     const custoApiUsd = audioUsd + gpt.totalUsd;
-    const custoApiBrl = custoApiUsd * cambio;
-    const custoMoBrl = moBase * (pctMo / 100);
-    const custoTotalMes = custoApiBrl + custoMoBrl;
+    const custoApiBrl = custoAudioBrl + custoTextoBrl;
+    const custoInfraBrl = 0; // n8n self-hosted
+    const custoTecnicoBrl = custoApiBrl + custoInfraBrl;
+
+    // Mão de obra: base fixa + percentual sobre custos técnicos
+    const moPercentual = custoTecnicoBrl * (pctMo / 100);
+    const custoMoBrl = moBase + moPercentual;
+
+    const custoTotalMes = custoTecnicoBrl + custoMoBrl;
     const custoPrimeiroMes = custoTotalMes + setup;
     const venda = calcVenda(custoTotalMes, setup, 0.40);
 
@@ -130,11 +140,13 @@ export function Calculator() {
       audiosMes, minutosMes,
       eleven, playht, polly, gpt,
       audioUsd, audioLabel,
-      custoApiUsd, custoApiBrl, custoMoBrl,
+      custoAudioBrl, custoTextoBrl, custoInfraBrl, custoTecnicoBrl,
+      custoApiUsd, custoApiBrl,
+      moPercentual, custoMoBrl,
       custoTotalMes, custoPrimeiroMes,
       ...venda,
     };
-  }, [totalDisparos, pctAudio, duracaoSeg, moBase, pctMo, cambio, setup, ferramentaAudio, modeloGpt, tokensPorMsg]);
+  }, [totalDisparos, pctAudio, duracaoSeg, moBase, pctMo, cambio, setup, ferramentaAudio, qualidade, modeloGpt, tokensPorMsg]);
 
   const planos = useMemo(() => calcPlanos(calc.precoVenda, setup), [calc.precoVenda, setup]);
   const anual = useMemo(() => calcAnual(calc.custoTotalMes, calc.precoVenda, setup), [calc.custoTotalMes, calc.precoVenda, setup]);
@@ -364,10 +376,11 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
   }
 
   const breakdown = [
-    { item: `${calc.audioLabel}`, usd: calc.audioUsd, brl: calc.audioUsd * cambio },
-    { item: `${GPT_PRICES[modeloGpt].label} / texto`, usd: calc.gpt.totalUsd, brl: calc.gpt.totalUsd * cambio },
+    { item: `${calc.audioLabel} · áudio`, usd: calc.audioUsd, brl: calc.audioUsd * cambio },
+    { item: `${GPT_PRICES[modeloGpt].label} · texto`, usd: calc.gpt.totalUsd, brl: calc.custoTextoBrl },
     { item: "n8n (self-hosted)", usd: 0, brl: 0 },
-    { item: `Mão de obra (${pctMo}%)`, usd: null as number | null, brl: calc.custoMoBrl },
+    { item: `Mão de obra base (fixa)`, usd: null as number | null, brl: moBase },
+    { item: `MO % sobre técnico (${pctMo}%)`, usd: null as number | null, brl: calc.moPercentual },
   ];
   const subtotalApiBrl = calc.custoApiBrl;
   const textosMes = totalDisparos * (1 - pctAudio / 100);
@@ -484,8 +497,8 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
               />
               <SliderInput label="Duração / áudio"    value={duracaoSeg}    onChange={setDuracaoSeg}    min={5} max={120} suffix="s" />
               <SliderInput label="Tokens / msg texto" value={tokensPorMsg}  onChange={setTokensPorMsg}  min={50} max={2000} step={10} />
-              <SliderInput label="MO base mensal"      value={moBase}        onChange={setMoBase}        min={0} max={20000} step={100} suffix="R$" />
-              <SliderInput label="% MO aplicada"       value={pctMo}         onChange={setPctMo}         min={0} max={100} suffix="%" hint={`= ${fmtBRL(moBase * pctMo / 100)}`} />
+              <SliderInput label="MO base (fixa BRL)"  value={moBase}        onChange={setMoBase}        min={0} max={20000} step={100} suffix="R$" hint="valor fixo somado todo mês" />
+              <SliderInput label="% MO sobre técnico"   value={pctMo}         onChange={setPctMo}         min={0} max={100} suffix="%" hint={`+ ${fmtBRL(calc.moPercentual)} (sobre custos técnicos)`} />
               <NumberField label="Câmbio USD → BRL" value={cambio} onChange={setCambio} step={0.05} prefix="R$" />
               <NumberField label="Setup (one-time)" value={setup}  onChange={setSetup}  step={100} prefix="R$" />
             </div>
@@ -512,7 +525,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
               {ferramentaAudio === "elevenlabs" && (
                 <div className="mt-3 flex items-center gap-2 flex-wrap">
                   <span className="text-xs text-[var(--tts-muted)] font-mono">Plano ótimo:</span>
-                  <span className="font-mono text-xs">{calc.eleven.plano.nome}</span>
+                  <span className="font-mono text-xs">{calc.eleven.plano.nome} · ${calc.eleven.plano.fixoUsd}/mês</span>
                   <span className={`tts-badge tts-badge-${calc.eleven.status === "ok" ? "ok" : calc.eleven.status === "warn" ? "warn" : "danger"}`}>
                     {calc.eleven.status === "ok" ? "Sem excedente"
                       : calc.eleven.status === "warn" ? `Exc. ${fmtNum(calc.eleven.excedenteMin)}min`
@@ -520,6 +533,31 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                   </span>
                 </div>
               )}
+            </div>
+
+            {/* Qualidade de áudio */}
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-2">Qualidade de áudio</div>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { id: "good" as AudioQuality,         label: "Bom",          hint: "WhatsApp · 128 kbps" },
+                  { id: "professional" as AudioQuality, label: "Profissional", hint: "192 kbps · cloning" },
+                  { id: "studio" as AudioQuality,       label: "Estúdio",      hint: "44.1kHz PCM" },
+                ]).map(q => (
+                  <button
+                    key={q.id}
+                    onClick={() => setQualidade(q.id)}
+                    className={`tts-btn !text-xs flex-col !items-start !py-2 ${qualidade === q.id ? "tts-btn-active" : ""}`}
+                    title={q.hint}
+                  >
+                    <span>{q.label}</span>
+                    <span className="text-[9px] text-[var(--tts-muted)] font-mono normal-case">{q.hint}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-[var(--tts-muted)] font-mono mt-2">
+                Plano recomendado considera apenas planos compatíveis com a qualidade selecionada.
+              </p>
             </div>
             <div>
               <div className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-2">Texto (GPT)</div>
@@ -581,6 +619,100 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
             <StatCard label="LTV 24 meses" value={fmtBRL(calc.precoVenda * 24 + setup)} sub={`Anual: ${fmtBRL(calc.faturamentoAnual)}`} accent="cyan" />
           </div>
         </section>
+
+        {/* Áudio ElevenLabs — seção dedicada */}
+        {ferramentaAudio === "elevenlabs" && (
+          <section>
+            <SectionTitle
+              icon={<Mic className="size-4" />}
+              title="Áudio ElevenLabs"
+              hint={`Qualidade: ${qualidade === "good" ? "Bom" : qualidade === "professional" ? "Profissional" : "Estúdio"}`}
+            />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Card do plano recomendado */}
+              <div className="tts-card p-5 lg:col-span-1 !border-[var(--tts-orange)]">
+                <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-1">
+                  Plano recomendado
+                </p>
+                <h3 className="font-display text-2xl font-bold">{calc.eleven.plano.nome}</h3>
+                <p className="text-xs text-[var(--tts-muted)] font-mono mb-3">
+                  {calc.eleven.plano.qualidadeLabel}
+                </p>
+                <div className="font-mono text-3xl font-bold" style={{ color: "var(--tts-orange)" }}>
+                  {fmtUSD(calc.eleven.totalUsd)}
+                  <span className="text-xs text-[var(--tts-muted)] font-normal">/mês</span>
+                </div>
+                <p className="text-xs text-[var(--tts-muted)] font-mono mt-1">
+                  ≈ {fmtBRL(calc.eleven.totalUsd * cambio)} (câmbio {cambio.toFixed(2)})
+                </p>
+
+                <div className="mt-4 space-y-1.5 text-xs font-mono">
+                  <Row k="Plano base"          v={`${fmtUSD(calc.eleven.plano.fixoUsd)}/mês`} />
+                  <Row k="Minutos inclusos"    v={`${fmtNum(calc.eleven.minutosInclusos)} min`} />
+                  <Row k="Minutos necessários" v={`${fmtNum(calc.eleven.minutosNecessarios, 1)} min`} />
+                  <Row k="Excedente"           v={`${fmtNum(calc.eleven.excedenteMin, 1)} min`} />
+                  <Row k="Custo excedente"     v={fmtUSD(calc.eleven.excedenteUsd)} />
+                  <div className="border-t border-[var(--tts-border)] pt-1.5 mt-1.5 flex justify-between font-bold">
+                    <span>Total ElevenLabs</span>
+                    <span style={{ color: "var(--tts-orange)" }}>{fmtUSD(calc.eleven.totalUsd)}/mês</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Comparativo entre planos elegíveis */}
+              <div className="tts-card p-5 lg:col-span-2 overflow-hidden">
+                <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">
+                  Comparativo de planos · qualidade compatível
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs font-mono">
+                    <thead>
+                      <tr className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] border-b border-[var(--tts-border)]">
+                        <th className="text-left p-2">Plano</th>
+                        <th className="text-right p-2">Fixo</th>
+                        <th className="text-right p-2">Inclusos</th>
+                        <th className="text-right p-2">Excedente</th>
+                        <th className="text-right p-2">Custo exc.</th>
+                        <th className="text-right p-2">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {calc.eleven.comparativo.map(r => {
+                        const isReco = r.plano.id === calc.eleven.plano.id;
+                        return (
+                          <tr
+                            key={r.plano.id}
+                            className={`border-b border-[var(--tts-border)]/60 ${isReco ? "bg-[var(--tts-surface-2)]" : ""}`}
+                          >
+                            <td className="p-2">
+                              <span className={isReco ? "font-bold text-[var(--tts-orange)]" : ""}>
+                                {r.plano.nome}
+                              </span>
+                              {isReco && <span className="ml-1 text-[9px]">★</span>}
+                            </td>
+                            <td className="p-2 text-right">{fmtUSD(r.plano.fixoUsd)}</td>
+                            <td className="p-2 text-right">{fmtNum(r.minutosInclusos)} min</td>
+                            <td className="p-2 text-right">
+                              {r.excedenteMin > 0
+                                ? <span className="text-[var(--tts-gold)]">{fmtNum(r.excedenteMin, 1)} min</span>
+                                : <span className="text-[var(--tts-green)]">—</span>}
+                            </td>
+                            <td className="p-2 text-right">{fmtUSD(r.excedenteUsd)}</td>
+                            <td className="p-2 text-right font-bold">{fmtUSD(r.totalUsd)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-[10px] text-[var(--tts-muted)] font-mono mt-3">
+                  Recomendado = plano mais barato que cobre o volume sem excedente.
+                  Se nenhum cobre, é escolhido o de menor custo total (fixo + excedente).
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Breakdown */}
         <section>
@@ -1072,6 +1204,15 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
           TTS Cost Calculator · MentoArk · cálculo client-side · valores referenciais sujeitos a alteração de preços nas APIs
         </footer>
       </div>
+    </div>
+  );
+}
+
+function Row({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="flex justify-between text-[var(--tts-muted)]">
+      <span>{k}</span>
+      <span className="text-[var(--tts-text)]">{v}</span>
     </div>
   );
 }

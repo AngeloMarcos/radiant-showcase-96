@@ -1,20 +1,37 @@
 // Engine de cálculo da TTS Cost Calculator. Funções puras.
+//
+// === Planos ElevenLabs (valores aproximados, USD/mês) ===
+// - Starter:  $5   · ~30k credits  · ~60 min de áudio   · 128 kbps (uso casual)
+// - Creator:  $22  · ~100k credits · ~200 min de áudio  · 192 kbps + voice cloning
+// - Pro:      $99  · ~500k credits · ~1.000 min         · 44.1kHz PCM via API
+// - Scale:    $330 · ~2M credits   · ~4.000 min         · alto volume / produção
+// - Business: $1320 · ~11M credits · ~11.000+ min       · enterprise
+// Conversão usada: ~500 credits por minuto de áudio (multilingual v2).
+// Excedente cobrado a uma taxa base por minuto (ajustável).
 
-export type ElevenPlanId = "creator" | "pro" | "scale" | "business";
+export type ElevenPlanId = "starter" | "creator" | "pro" | "scale" | "business";
+export type AudioQuality = "good" | "professional" | "studio";
 
 export interface ElevenPlan {
   id: ElevenPlanId;
   nome: string;
   fixoUsd: number;
   minutosInclusos: number;
-  taxaExcedenteUsd: number; // por minuto
+  taxaExcedenteUsd: number;     // USD por minuto excedente
+  qualidadeLabel: string;       // descrição amigável (kbps / formato)
+  qualidades: AudioQuality[];   // níveis de qualidade que este plano atende
 }
 
+// Taxa base de excedente por minuto (estimada). Pode ser ajustada conforme
+// o consumo real de credits da sua conta.
+export const ELEVEN_OVERAGE_USD_PER_MIN = 0.20;
+
 export const ELEVEN_PLANS: ElevenPlan[] = [
-  { id: "creator",  nome: "Creator",  fixoUsd: 22,   minutosInclusos: 100,    taxaExcedenteUsd: 0.18 },
-  { id: "pro",      nome: "Pro",      fixoUsd: 99,   minutosInclusos: 600,    taxaExcedenteUsd: 0.18 },
-  { id: "scale",    nome: "Scale",    fixoUsd: 330,  minutosInclusos: 1800,   taxaExcedenteUsd: 0.17 },
-  { id: "business", nome: "Business", fixoUsd: 1320, minutosInclusos: 11000,  taxaExcedenteUsd: 0.12 },
+  { id: "starter",  nome: "Starter",  fixoUsd: 5,    minutosInclusos: 60,     taxaExcedenteUsd: ELEVEN_OVERAGE_USD_PER_MIN, qualidadeLabel: "128 kbps · uso casual",         qualidades: ["good"] },
+  { id: "creator",  nome: "Creator",  fixoUsd: 22,   minutosInclusos: 200,    taxaExcedenteUsd: ELEVEN_OVERAGE_USD_PER_MIN, qualidadeLabel: "192 kbps · pro voice cloning",  qualidades: ["good", "professional"] },
+  { id: "pro",      nome: "Pro",      fixoUsd: 99,   minutosInclusos: 1000,   taxaExcedenteUsd: ELEVEN_OVERAGE_USD_PER_MIN, qualidadeLabel: "44.1kHz PCM via API",            qualidades: ["professional", "studio"] },
+  { id: "scale",    nome: "Scale",    fixoUsd: 330,  minutosInclusos: 4000,   taxaExcedenteUsd: ELEVEN_OVERAGE_USD_PER_MIN, qualidadeLabel: "44.1kHz PCM · alto volume",      qualidades: ["studio"] },
+  { id: "business", nome: "Business", fixoUsd: 1320, minutosInclusos: 11000,  taxaExcedenteUsd: ELEVEN_OVERAGE_USD_PER_MIN, qualidadeLabel: "Enterprise · SLA",               qualidades: ["studio"] },
 ];
 
 export const GPT_PRICES = {
@@ -29,38 +46,66 @@ export function calcMinutos(disparos: number, pctAudio: number, duracaoSeg: numb
   return { audiosMes, minutosMes };
 }
 
-export interface ElevenResult {
+export interface ElevenPlanResult {
   plano: ElevenPlan;
-  fixoUsd: number;
+  minutosNecessarios: number;
+  minutosInclusos: number;
   excedenteMin: number;
+  precoPlanoUsd: number;
   excedenteUsd: number;
   totalUsd: number;
-  status: "ok" | "warn" | "danger"; // ok = sem excedente, warn = excedente <= 30%, danger = > 30%
+  cobre: boolean;                // true se inclusos >= necessários
+  status: "ok" | "warn" | "danger";
 }
 
-// Escolhe o plano que minimiza o custo total: testa todos os planos e pega o mais barato.
-// Para volumes baixos, plano Creator com excedente pode bater Pro; para volumes altos,
-// vale a pena subir para reduzir taxa de excedente.
-export function calcElevenLabs(minutosMes: number): ElevenResult {
-  let best: ElevenResult | null = null;
-  for (const plano of ELEVEN_PLANS) {
-    const excMin = Math.max(0, minutosMes - plano.minutosInclusos);
-    const excUsd = excMin * plano.taxaExcedenteUsd;
-    const total = plano.fixoUsd + excUsd;
-    const pctExc = plano.minutosInclusos > 0 ? excMin / plano.minutosInclusos : 0;
-    const status: ElevenResult["status"] =
-      excMin === 0 ? "ok" : pctExc <= 0.30 ? "warn" : "danger";
-    const candidate: ElevenResult = {
-      plano,
-      fixoUsd: plano.fixoUsd,
-      excedenteMin: excMin,
-      excedenteUsd: excUsd,
-      totalUsd: total,
-      status,
-    };
-    if (!best || candidate.totalUsd < best.totalUsd) best = candidate;
-  }
-  return best!;
+export interface ElevenResult extends ElevenPlanResult {
+  // Mantém compat com a API antiga (campos usados na UI):
+  fixoUsd: number;
+  // Lista comparativa de TODOS os planos elegíveis para a qualidade escolhida:
+  comparativo: ElevenPlanResult[];
+}
+
+function avaliarPlano(plano: ElevenPlan, minutosMes: number): ElevenPlanResult {
+  const excMin = Math.max(0, minutosMes - plano.minutosInclusos);
+  const excUsd = excMin * plano.taxaExcedenteUsd;
+  const total = plano.fixoUsd + excUsd;
+  const pctExc = plano.minutosInclusos > 0 ? excMin / plano.minutosInclusos : 0;
+  const status: ElevenPlanResult["status"] =
+    excMin === 0 ? "ok" : pctExc <= 0.30 ? "warn" : "danger";
+  return {
+    plano,
+    minutosNecessarios: minutosMes,
+    minutosInclusos: plano.minutosInclusos,
+    excedenteMin: excMin,
+    precoPlanoUsd: plano.fixoUsd,
+    excedenteUsd: excUsd,
+    totalUsd: total,
+    cobre: excMin === 0,
+    status,
+  };
+}
+
+// Escolhe o plano mais barato dentre os elegíveis para a qualidade selecionada.
+// Estratégia: 1) prefere o plano mais barato que COBRE o volume sem excedente;
+// 2) se nenhum cobre, escolhe o de menor custo total (fixo + excedente).
+export function calcElevenLabs(
+  minutosMes: number,
+  qualidade: AudioQuality = "good",
+): ElevenResult {
+  const elegiveis = ELEVEN_PLANS.filter(p => p.qualidades.includes(qualidade));
+  const comparativo = elegiveis.map(p => avaliarPlano(p, minutosMes));
+
+  const cobrem = comparativo.filter(r => r.cobre);
+  const recomendado =
+    cobrem.length > 0
+      ? cobrem.reduce((a, b) => (a.totalUsd <= b.totalUsd ? a : b))
+      : comparativo.reduce((a, b) => (a.totalUsd <= b.totalUsd ? a : b));
+
+  return {
+    ...recomendado,
+    fixoUsd: recomendado.plano.fixoUsd,
+    comparativo,
+  };
 }
 
 export function calcPlayht(minutosMes: number) {
