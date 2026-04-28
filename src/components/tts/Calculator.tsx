@@ -104,7 +104,7 @@ export function Calculator() {
   // ===== Cálculos memorizados =====
   const calc = useMemo(() => {
     const { audiosMes, minutosMes } = calcMinutos(totalDisparos, pctAudio, duracaoSeg);
-    const eleven = calcElevenLabs(minutosMes);
+    const eleven = calcElevenLabs(minutosMes, qualidade);
     const playht = calcPlayht(minutosMes);
     const polly = calcPolly(minutosMes);
     const gpt = calcGpt(totalDisparos, pctAudio, tokensPorMsg, modeloGpt);
@@ -120,10 +120,19 @@ export function Calculator() {
       ferramentaAudio === "polly"      ? "Amazon Polly" :
       `ElevenLabs ${eleven.plano.nome} (referência)`;
 
+    // Custos técnicos (APIs convertidas para BRL)
+    const custoAudioBrl = audioUsd * cambio;
+    const custoTextoBrl = gpt.totalUsd * cambio;
     const custoApiUsd = audioUsd + gpt.totalUsd;
-    const custoApiBrl = custoApiUsd * cambio;
-    const custoMoBrl = moBase * (pctMo / 100);
-    const custoTotalMes = custoApiBrl + custoMoBrl;
+    const custoApiBrl = custoAudioBrl + custoTextoBrl;
+    const custoInfraBrl = 0; // n8n self-hosted
+    const custoTecnicoBrl = custoApiBrl + custoInfraBrl;
+
+    // Mão de obra: base fixa + percentual sobre custos técnicos
+    const moPercentual = custoTecnicoBrl * (pctMo / 100);
+    const custoMoBrl = moBase + moPercentual;
+
+    const custoTotalMes = custoTecnicoBrl + custoMoBrl;
     const custoPrimeiroMes = custoTotalMes + setup;
     const venda = calcVenda(custoTotalMes, setup, 0.40);
 
@@ -131,11 +140,13 @@ export function Calculator() {
       audiosMes, minutosMes,
       eleven, playht, polly, gpt,
       audioUsd, audioLabel,
-      custoApiUsd, custoApiBrl, custoMoBrl,
+      custoAudioBrl, custoTextoBrl, custoInfraBrl, custoTecnicoBrl,
+      custoApiUsd, custoApiBrl,
+      moPercentual, custoMoBrl,
       custoTotalMes, custoPrimeiroMes,
       ...venda,
     };
-  }, [totalDisparos, pctAudio, duracaoSeg, moBase, pctMo, cambio, setup, ferramentaAudio, modeloGpt, tokensPorMsg]);
+  }, [totalDisparos, pctAudio, duracaoSeg, moBase, pctMo, cambio, setup, ferramentaAudio, qualidade, modeloGpt, tokensPorMsg]);
 
   const planos = useMemo(() => calcPlanos(calc.precoVenda, setup), [calc.precoVenda, setup]);
   const anual = useMemo(() => calcAnual(calc.custoTotalMes, calc.precoVenda, setup), [calc.custoTotalMes, calc.precoVenda, setup]);
