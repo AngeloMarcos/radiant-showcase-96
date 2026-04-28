@@ -1434,32 +1434,6 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                     <span className="text-[10px] text-[var(--tts-muted)]">/nº</span>
                   </div>
                 </div>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="range"
-                    min={150}
-                    max={500}
-                    step={5}
-                    value={moPrecoCustom}
-                    onChange={(e) => setMoPrecoCustom(Number(e.target.value))}
-                    className="flex-1 accent-[var(--tts-orange)]"
-                  />
-                  <div className="flex items-center gap-1 font-mono text-sm">
-                    <span className="text-[var(--tts-muted)]">R$</span>
-                    <input
-                      type="number"
-                      min={150}
-                      max={2000}
-                      step={5}
-                      value={moPrecoCustom}
-                      onChange={(e) => setMoPrecoCustom(Math.max(150, Number(e.target.value) || 150))}
-                      className="w-20 bg-transparent border border-[var(--tts-border)] rounded px-2 py-1 text-right font-bold"
-                      style={{ color: "var(--tts-orange)" }}
-                    />
-                    <span className="text-[10px] text-[var(--tts-muted)]">/nº</span>
-                  </div>
-                </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
                   <div className="tts-card p-2">
                     <p className="text-[9px] uppercase text-[var(--tts-muted)]">Total MO/mês</p>
