@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   calcMinutos, calcElevenLabs, calcPlayht, calcPolly, calcGpt, calcVenda,
   calcPlanos, calcAnual, calcRampUp, calcEscalaPorNumero, calcSensibilidadePorNumero,
+  calcCondicaoCampanha, calcCenariosCampanha,
   GPT_PRICES, fmtBRL, fmtUSD, fmtNum,
   calcularMaoDeObraPorNumero, calcularPercentualMaoDeObra,
   aplicarPisoMargem, MARGEM_MINIMA_OBRIGATORIA, MARGEM_PADRAO,
@@ -19,6 +20,7 @@ import {
   Calculator as CalcIcon, Mic, MessageSquare, Wrench, TrendingUp,
   AlertTriangle, Lightbulb, Copy, Check, Sparkles, Sun, Moon,
   RotateCcw, Save, Clock, Printer, FileDown, Presentation,
+  CalendarClock, ShieldCheck, ShieldAlert,
 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { PresentationMode } from "./PresentationMode";
@@ -112,6 +114,12 @@ export function Calculator() {
   const [mostrarHistorico, setMostrarHistorico] = useState(false);
   const [salvo, setSalvo] = useState(false);
   const [apresentacaoAberta, setApresentacaoAberta] = useState(false);
+
+  // ===== Modo Campanha (pagamento diferido da MO) =====
+  const [modoCampanha, setModoCampanha] = useState(false);
+  const [pctEntradaMO, setPctEntradaMO] = useState(50);
+  const [reservaMinima, setReservaMinima] = useState(0);
+  const [presetCampanha, setPresetCampanha] = useState<"30/70" | "40/60" | "50/50" | "60/40" | "custom">("50/50");
 
   // ===== Escala por número (modo proporcional) =====
   // Quando ativo, disparos/pctAudio/infra são DERIVADOS da qtd de números.
@@ -212,6 +220,22 @@ export function Calculator() {
   // Margem mínima — alerta visual.
   const margemAbaixoMinima = calc.margemPct / 100 < MARGEM_MINIMA_OBRIGATORIA;
   const precoMinimoSeguro = aplicarPisoMargem(calc.custoTotalMes, calc.precoVenda);
+
+  // ===== Condição de campanha (pagamento diferido da MO) =====
+  const campanha = useMemo(() => calcCondicaoCampanha({
+    custoTecnicoBrl: calc.custoTecnicoBrl,
+    maoDeObraBrl: calc.custoMoBrl,
+    precoVenda: planoRecomendado.preco, // ancora no plano recomendado
+    pctEntradaMO,
+    reservaMinima,
+  }), [calc.custoTecnicoBrl, calc.custoMoBrl, planoRecomendado.preco, pctEntradaMO, reservaMinima]);
+
+  const cenariosCampanha = useMemo(() => calcCenariosCampanha({
+    custoTecnicoBrl: calc.custoTecnicoBrl,
+    maoDeObraBrl: calc.custoMoBrl,
+    precoVenda: planoRecomendado.preco,
+    reservaMinima,
+  }), [calc.custoTecnicoBrl, calc.custoMoBrl, planoRecomendado.preco, reservaMinima]);
 
   // ===== Ramp-up (crescimento gradual) =====
   const [rampAtivo, setRampAtivo] = useState(false);
@@ -1475,6 +1499,258 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
               <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Setup único</p><p className="font-bold text-base">{fmtBRL(planoRecomendado.setup)}</p></div>
             </div>
           </div>
+        </section>
+
+        {/* ===== Condição comercial para início imediato (modo campanha) ===== */}
+        <section className="tts-print-section">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <SectionTitle
+              icon={<CalendarClock className="size-4" />}
+              title="Condição comercial para início imediato"
+              hint="Pagamento diferido — ideal para candidatos sem caixa hoje"
+            />
+            <label className="tts-btn !text-xs cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="accent-[var(--tts-orange)]"
+                checked={modoCampanha}
+                onChange={(e) => setModoCampanha(e.target.checked)}
+              />
+              {modoCampanha ? "Modo campanha ATIVO" : "Ativar modo campanha"}
+            </label>
+          </div>
+
+          {modoCampanha && (
+            <>
+              {/* Presets + custom */}
+              <div className="tts-card p-4 mb-4">
+                <p className="text-xs uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">
+                  Quanto da mão de obra entra agora?
+                </p>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {([
+                    ["30/70", 30], ["40/60", 40], ["50/50", 50], ["60/40", 60],
+                  ] as const).map(([label, pct]) => (
+                    <button
+                      key={label}
+                      onClick={() => { setPresetCampanha(label); setPctEntradaMO(pct); }}
+                      className={`tts-btn !text-xs !py-2 !px-4 ${presetCampanha === label ? "tts-btn-active" : ""}`}
+                    >
+                      {label} <span className="text-[10px] opacity-70 ml-1">({pct}% agora)</span>
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setPresetCampanha("custom")}
+                    className={`tts-btn !text-xs !py-2 !px-4 ${presetCampanha === "custom" ? "tts-btn-active" : ""}`}
+                  >
+                    Personalizado
+                  </button>
+                  <button
+                    onClick={() => {
+                      const min = Math.ceil(campanha.pctEntradaMinimaSegura);
+                      setPctEntradaMO(min);
+                      setPresetCampanha("custom");
+                    }}
+                    className="tts-btn !text-xs !py-2 !px-4 !border-[var(--tts-green)] text-[var(--tts-green)]"
+                    title="Define o % mínimo que cobre custos técnicos + reserva"
+                  >
+                    <ShieldCheck className="size-3" /> Entrada mínima segura ({Math.ceil(campanha.pctEntradaMinimaSegura)}%)
+                  </button>
+                </div>
+
+                {presetCampanha === "custom" && (
+                  <div className="mb-3">
+                    <SliderInput
+                      label="% da mão de obra na entrada"
+                      value={pctEntradaMO}
+                      min={0} max={100} step={5}
+                      onChange={setPctEntradaMO}
+                      suffix="%"
+                    />
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                  <NumberField
+                    label="Reserva mínima de caixa"
+                    value={reservaMinima}
+                    onChange={setReservaMinima}
+                    step={500}
+                    prefix="R$"
+                  />
+                  <div className="flex items-end text-[11px] text-[var(--tts-muted)] font-mono">
+                    Folga adicional sobre o custo técnico que você quer garantir na entrada.
+                  </div>
+                </div>
+              </div>
+
+              {/* Banner de risco */}
+              {campanha.risco === "alto" && (
+                <div className="tts-card p-4 mb-4 !border-[var(--tts-red)]" style={{ background: "color-mix(in oklab, var(--tts-red) 8%, transparent)" }}>
+                  <div className="flex items-start gap-2">
+                    <ShieldAlert className="size-5 text-[var(--tts-red)] mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-bold text-[var(--tts-red)]">RISCO ALTO — entrada não cobre os custos técnicos</p>
+                      <p className="text-sm text-[var(--tts-muted)] font-mono mt-1">
+                        Você receberá {fmtBRL(campanha.valorPagoAgora)} agora, mas vai gastar {fmtBRL(campanha.custoTecnicoTotal)} em APIs/infra.
+                        Suba para no mínimo <span className="text-[var(--tts-text)] font-bold">{Math.ceil(campanha.pctEntradaMinimaSegura)}%</span> da MO na entrada.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {campanha.risco === "medio" && (
+                <div className="tts-card p-4 mb-4 !border-[var(--tts-gold)]" style={{ background: "color-mix(in oklab, var(--tts-gold) 8%, transparent)" }}>
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="size-5 text-[var(--tts-gold)] mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-bold text-[var(--tts-gold)]">Atenção — entrada cobre custos mas sem reserva</p>
+                      <p className="text-sm text-[var(--tts-muted)] font-mono mt-1">
+                        Cobertura técnica: {fmtBRL(campanha.coberturaTecnica)} · Reserva mínima desejada: {fmtBRL(reservaMinima)}.
+                        Faltam {fmtBRL(reservaMinima - campanha.coberturaTecnica)}.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {campanha.risco === "ok" && (
+                <div className="tts-card p-4 mb-4 !border-[var(--tts-green)]" style={{ background: "color-mix(in oklab, var(--tts-green) 8%, transparent)" }}>
+                  <div className="flex items-start gap-2">
+                    <ShieldCheck className="size-5 text-[var(--tts-green)] mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-bold text-[var(--tts-green)]">Operação segura</p>
+                      <p className="text-sm text-[var(--tts-muted)] font-mono mt-1">
+                        Custos técnicos cobertos com folga de {fmtBRL(campanha.coberturaTecnica)} · margem preservada.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Cards Agora / Depois */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="tts-card p-5 !border-[var(--tts-orange)]">
+                  <p className="text-xs uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-1">Pago AGORA (entrada)</p>
+                  <p className="font-mono text-4xl font-bold" style={{ color: "var(--tts-orange)" }}>{fmtBRL(campanha.valorPagoAgora)}</p>
+                  <p className="text-sm text-[var(--tts-muted)] font-mono mt-1">{campanha.percentualPagoAgora.toFixed(1)}% do total</p>
+                  <p className="text-xs text-[var(--tts-muted)] font-mono mt-3">
+                    Cobre: técnico ({fmtBRL(campanha.custoTecnicoTotal)}) + {pctEntradaMO}% MO ({fmtBRL(campanha.entradaMaoDeObra)}) + margem ({fmtBRL(campanha.margemBrl)})
+                  </p>
+                </div>
+                <div className="tts-card p-5">
+                  <p className="text-xs uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-1">Pago DEPOIS (saldo)</p>
+                  <p className="font-mono text-4xl font-bold">{fmtBRL(campanha.valorPagoDepois)}</p>
+                  <p className="text-sm text-[var(--tts-muted)] font-mono mt-1">{campanha.percentualPagoDepois.toFixed(1)}% do total</p>
+                  <p className="text-xs text-[var(--tts-muted)] font-mono mt-3">
+                    Saldo de mão de obra · programado para liberação da verba de campanha.
+                  </p>
+                </div>
+              </div>
+
+              {/* Gráficos */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                {/* A — Barra empilhada */}
+                <div className="tts-card p-4">
+                  <p className="text-xs uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">Composição do preço</p>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={[{
+                      n: "Total",
+                      tecnico: campanha.custoTecnicoTotal,
+                      moAgora: campanha.entradaMaoDeObra,
+                      margem: campanha.margemBrl,
+                      moDepois: campanha.saldoMaoDeObra,
+                    }]} layout="vertical" margin={{ left: 10, right: 10 }}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis type="number" tickFormatter={(v) => fmtBRL(v)} fontSize={10} />
+                      <YAxis type="category" dataKey="n" hide />
+                      <Tooltip formatter={(v: number) => fmtBRL(v)} />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      <Bar dataKey="tecnico" name="Técnico (agora)" stackId="a" fill={CHART_COLORS.green} />
+                      <Bar dataKey="moAgora" name="MO agora" stackId="a" fill={CHART_COLORS.orange} />
+                      <Bar dataKey="margem" name="Margem (agora)" stackId="a" fill={CHART_COLORS.gold} />
+                      <Bar dataKey="moDepois" name="MO depois" stackId="a" fill={CHART_COLORS.purple} fillOpacity={0.5} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* B — Donut % */}
+                <div className="tts-card p-4">
+                  <p className="text-xs uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">Agora vs. Depois</p>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: "Agora", value: campanha.valorPagoAgora, cor: CHART_COLORS.orange },
+                          { name: "Depois", value: campanha.valorPagoDepois, cor: CHART_COLORS.purple },
+                        ]}
+                        dataKey="value"
+                        innerRadius={55}
+                        outerRadius={85}
+                        paddingAngle={2}
+                        label={(e: any) => `${((e.value / campanha.precoTotal) * 100).toFixed(0)}%`}
+                        labelLine={false}
+                      >
+                        <Cell fill={CHART_COLORS.orange} />
+                        <Cell fill={CHART_COLORS.purple} />
+                      </Pie>
+                      <Tooltip formatter={(v: number) => fmtBRL(v)} />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* C — Cenários comparativos */}
+                <div className="tts-card p-4">
+                  <p className="text-xs uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">Cenários (entrada de MO)</p>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={cenariosCampanha.map(c => ({
+                      cenario: `${c.pct}%`,
+                      agora: c.agora,
+                      depois: c.depois,
+                    }))}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis dataKey="cenario" fontSize={10} />
+                      <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} fontSize={10} />
+                      <Tooltip formatter={(v: number) => fmtBRL(v)} />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      <Bar dataKey="agora" name="Agora" fill={CHART_COLORS.orange} />
+                      <Bar dataKey="depois" name="Depois" fill={CHART_COLORS.purple} fillOpacity={0.6} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Resumo final */}
+              <div className="tts-card p-5 !border-[var(--tts-orange)]">
+                <div className="flex items-center gap-2 mb-3">
+                  <CalendarClock className="size-4 text-[var(--tts-orange)]" />
+                  <h3 className="font-display font-bold">Resumo da condição especial</h3>
+                  <span className={`tts-badge ml-auto ${
+                    campanha.risco === "ok" ? "tts-badge-ok" :
+                    campanha.risco === "medio" ? "tts-badge-orange" : "tts-badge-danger"
+                  }`}>
+                    {campanha.risco === "ok" ? "Margem protegida" : campanha.risco === "medio" ? "Sem reserva" : "RISCO ALTO"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm font-mono">
+                  <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Números</p><p className="font-bold text-base">{quantidadeNumeros}</p></div>
+                  <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Custo técnico</p><p className="font-bold text-base">{fmtBRL(campanha.custoTecnicoTotal)}</p></div>
+                  <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Mão de obra total</p><p className="font-bold text-base">{fmtBRL(campanha.maoDeObraTotal)}</p></div>
+                  <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Preço total</p><p className="font-bold text-base">{fmtBRL(campanha.precoTotal)}</p></div>
+                  <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Entrada (agora)</p><p className="font-bold text-base" style={{ color: "var(--tts-orange)" }}>{fmtBRL(campanha.valorPagoAgora)}</p></div>
+                  <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Saldo (depois)</p><p className="font-bold text-base">{fmtBRL(campanha.valorPagoDepois)}</p></div>
+                  <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">% agora</p><p className="font-bold text-base">{campanha.percentualPagoAgora.toFixed(1)}%</p></div>
+                  <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">% depois</p><p className="font-bold text-base">{campanha.percentualPagoDepois.toFixed(1)}%</p></div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {!modoCampanha && (
+            <div className="tts-card p-4 text-sm text-[var(--tts-muted)] font-mono">
+              Ative o modo campanha para oferecer entrada reduzida (com saldo programado para a liberação da verba de campanha) sem comprometer seus custos técnicos.
+            </div>
+          )}
         </section>
 
         {/* Histórico */}
