@@ -197,9 +197,9 @@ export function Calculator() {
     return calcRampUp({
       meses: rampMeses,
       disparosInicial: rampDisparosIni,
-      disparosFinal: totalDisparos,
+      disparosFinal: disparosEfetivos,
       pctAudioInicial: rampPctAudioIni,
-      pctAudioFinal: pctAudio,
+      pctAudioFinal: pctAudioEfetivo,
       duracaoSeg,
       tokensPorMsg,
       modeloGpt,
@@ -211,7 +211,7 @@ export function Calculator() {
       setup,
     });
   }, [rampAtivo, rampMeses, rampDisparosIni, rampPctAudioIni, rampNumerosIni,
-      totalDisparos, pctAudio, duracaoSeg, tokensPorMsg, modeloGpt,
+      disparosEfetivos, pctAudioEfetivo, duracaoSeg, tokensPorMsg, modeloGpt,
       ferramentaAudio, quantidadeNumeros, moPlanoId, cambio, setup]);
 
   // ===== Gráfico de barras =====
