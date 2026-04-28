@@ -655,7 +655,7 @@ export function calcRampUp(input: RampInput): RampMes[] {
     const custoAudioBrl = audioUsd * input.cambio;
     const custoTextoBrl = gpt.totalUsd * input.cambio;
     const custoApiBrl = custoAudioBrl + custoTextoBrl;
-    const custoMoBrl = calcularMaoDeObraPorNumero(numeros, input.moPlanoId);
+    const custoMoBrl = calcularMaoDeObraPorNumero(numeros, input.moPlanoId, input.moPrecoOverride);
     const custoTotal = custoApiBrl + custoMoBrl;
     const venda = calcVenda(custoTotal, input.setup, margem);
 
