@@ -997,11 +997,11 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                   hint={`Meta: ${pctAudio}%`}
                 />
                 <SliderInput
-                  label="% MO no mês 1"
-                  value={rampPctMoIni}
-                  onChange={setRampPctMoIni}
-                  min={0} max={100} suffix="%"
-                  hint={`Meta: ${pctMo}% · = ${fmtBRL(moBase * rampPctMoIni / 100)}`}
+                  label="Números no mês 1"
+                  value={rampNumerosIni}
+                  onChange={setRampNumerosIni}
+                  min={1} max={Math.max(quantidadeNumeros, 1)} step={1}
+                  hint={`Meta: ${quantidadeNumeros} números (plano ${moPlanoSel.nome})`}
                 />
               </div>
 
@@ -1017,7 +1017,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                       setRampMeses(n);
                       setRampDisparosIni(Math.max(500, Math.round(totalDisparos / n / 500) * 500));
                       setRampPctAudioIni(Math.round(pctAudio / n));
-                      setRampPctMoIni(Math.round(pctMo / n));
+                      setRampNumerosIni(Math.max(1, Math.round(quantidadeNumeros / n)));
                     }}
                     className="tts-btn !text-xs !py-1 !px-3"
                     title={`Começa com 1/${n} do volume final e cresce em ${n} meses`}
@@ -1029,7 +1029,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                   onClick={() => {
                     setRampDisparosIni(totalDisparos);
                     setRampPctAudioIni(pctAudio);
-                    setRampPctMoIni(pctMo);
+                    setRampNumerosIni(quantidadeNumeros);
                   }}
                   className="tts-btn !text-xs !py-1 !px-3"
                   title="Inicia já no volume final (sem ramp)"
