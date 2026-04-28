@@ -18,9 +18,10 @@ import {
 import {
   Calculator as CalcIcon, Mic, MessageSquare, Wrench, TrendingUp,
   AlertTriangle, Lightbulb, Copy, Check, Sparkles, Sun, Moon,
-  RotateCcw, Save, Clock, Printer, FileDown,
+  RotateCcw, Save, Clock, Printer, FileDown, Presentation,
 } from "lucide-react";
 import { jsPDF } from "jspdf";
+import { PresentationMode } from "./PresentationMode";
 
 type AudioTool = "elevenlabs" | "playht" | "polly" | "comparar";
 
@@ -110,6 +111,7 @@ export function Calculator() {
   }, []);
   const [mostrarHistorico, setMostrarHistorico] = useState(false);
   const [salvo, setSalvo] = useState(false);
+  const [apresentacaoAberta, setApresentacaoAberta] = useState(false);
 
   // ===== Escala por número (modo proporcional) =====
   // Quando ativo, disparos/pctAudio/infra são DERIVADOS da qtd de números.
@@ -502,6 +504,9 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
               </div>
             </div>
 
+            <button onClick={() => setApresentacaoAberta(true)} className="tts-btn-primary !text-xs" title="Modo apresentação para o cliente">
+              <Presentation className="size-3" /> Apresentar
+            </button>
             <button onClick={toggleTema} className="tts-btn !text-xs" title="Alternar tema">
               {tema === "dark" ? <Sun className="size-3" /> : <Moon className="size-3" />}
             </button>
