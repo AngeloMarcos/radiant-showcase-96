@@ -477,7 +477,6 @@ export function calcSensibilidadePorNumero(i: SensibilidadeInput): Sensibilidade
     };
   });
 }
-}
 
 export function calcAnual(custoMes: number, precoVendaMes: number, setup: number) {
   const meses = [];
