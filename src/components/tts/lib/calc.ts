@@ -598,6 +598,7 @@ export interface RampInput {
   numerosInicial: number;
   numerosFinal: number;
   moPlanoId: MoPlanoId;
+  moPrecoOverride?: number;
   cambio: number;
   setup: number;
   margem?: number;
