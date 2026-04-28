@@ -1164,6 +1164,144 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
           </div>
         </section>
 
+        {/* === Gráficos comerciais === */}
+        <section>
+          <SectionTitle icon={<TrendingUp className="size-4" />} title="Visão comercial" hint="Como seu preço se forma e como escala com o volume" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* A) Composição do preço */}
+            <div className="tts-card p-4 md:p-6">
+              <div className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">
+                Como seu preço final é composto
+              </div>
+              <div style={{ width: "100%", height: 280 }}>
+                <ResponsiveContainer>
+                  <BarChart
+                    data={[{
+                      name: "Preço final",
+                      "Custo técnico (APIs + infra)": calc.custoTecnicoBrl,
+                      "Mão de obra": calc.custoMoBrl,
+                      "Lucro": planoRecomendado.lucroMes,
+                    }]}
+                    layout="vertical"
+                    margin={{ top: 10, right: 20, left: 0, bottom: 10 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1a2235" />
+                    <XAxis type="number" stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 11 }}
+                      tickFormatter={(v) => "R$" + (v >= 1000 ? (v / 1000).toFixed(1) + "k" : v.toFixed(0))} />
+                    <YAxis type="category" dataKey="name" stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 12 }} width={90} />
+                    <Tooltip contentStyle={{ background: "#0d1119", border: "1px solid #1a2235", borderRadius: 8, fontSize: 12, color: "#d8e4f5" }}
+                      formatter={(v: number) => fmtBRL(v)} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="Custo técnico (APIs + infra)" stackId="a" fill={CHART_COLORS.cyan} />
+                    <Bar dataKey="Mão de obra"                  stackId="a" fill={CHART_COLORS.purple} />
+                    <Bar dataKey="Lucro"                        stackId="a" fill={CHART_COLORS.green} radius={[0, 6, 6, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mt-3 text-[11px] font-mono">
+                <div><p className="text-[var(--tts-muted)]">Técnico</p><p className="font-bold">{fmtBRL(calc.custoTecnicoBrl)}</p></div>
+                <div><p className="text-[var(--tts-muted)]">MO</p><p className="font-bold">{fmtBRL(calc.custoMoBrl)}</p></div>
+                <div><p className="text-[var(--tts-muted)]">Preço</p><p className="font-bold" style={{ color: "var(--tts-orange)" }}>{fmtBRL(planoRecomendado.preco)}</p></div>
+              </div>
+            </div>
+
+            {/* C) Comparação dos 3 planos */}
+            <div className="tts-card p-4 md:p-6">
+              <div className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">
+                Comparação dos planos · preço × lucro × capacidade
+              </div>
+              <div style={{ width: "100%", height: 280 }}>
+                <ResponsiveContainer>
+                  <BarChart
+                    data={planos.map(p => ({
+                      nome: p.nome,
+                      "Preço final": p.preco,
+                      "Lucro": p.lucroMes,
+                      "Capacidade (mil)": p.capacidadeDisparos / 1000,
+                    }))}
+                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1a2235" />
+                    <XAxis dataKey="nome" stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 12 }} />
+                    <YAxis yAxisId="left" stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 11 }}
+                      tickFormatter={(v) => "R$" + (v >= 1000 ? (v / 1000).toFixed(1) + "k" : v.toFixed(0))} />
+                    <YAxis yAxisId="right" orientation="right" stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 11 }}
+                      tickFormatter={(v) => v + "k"} />
+                    <Tooltip contentStyle={{ background: "#0d1119", border: "1px solid #1a2235", borderRadius: 8, fontSize: 12, color: "#d8e4f5" }}
+                      formatter={(v: number, name: string) => name === "Capacidade (mil)" ? [fmtNum(v, 1) + "k disparos", name] : [fmtBRL(v), name]} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar yAxisId="left" dataKey="Preço final" fill={CHART_COLORS.orange} radius={[6, 6, 0, 0]} />
+                    <Bar yAxisId="left" dataKey="Lucro"       fill={CHART_COLORS.green}  radius={[6, 6, 0, 0]} />
+                    <Bar yAxisId="right" dataKey="Capacidade (mil)" fill={CHART_COLORS.cyan} radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* B) Linha — escala por quantidade de números */}
+          <div className="tts-card p-4 md:p-6 mt-4">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <div className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono">
+                Escala por quantidade de números (10 · 30 · 50 · 100)
+              </div>
+              <span className="text-[10px] text-[var(--tts-muted)] font-mono">
+                Atual: <span className="text-[var(--tts-orange)] font-bold">{quantidadeNumeros} nº</span>
+              </span>
+            </div>
+            <div style={{ width: "100%", height: 300 }}>
+              <ResponsiveContainer>
+                <LineChart data={sensibilidade} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1a2235" />
+                  <XAxis dataKey="numeros" stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 12 }}
+                    label={{ value: "Quantidade de números", position: "insideBottom", offset: -2, fill: "#94a3b8", fontSize: 11 }} />
+                  <YAxis stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 11 }}
+                    tickFormatter={(v) => "R$" + (v >= 1000 ? (v / 1000).toFixed(1) + "k" : v.toFixed(0))} />
+                  <Tooltip contentStyle={{ background: "#0d1119", border: "1px solid #1a2235", borderRadius: 8, fontSize: 12, color: "#d8e4f5" }}
+                    formatter={(v: number) => fmtBRL(v)}
+                    labelFormatter={(l) => `${l} números`} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Line type="monotone" dataKey="custoTotalBrl" name="Custo total"  stroke={CHART_COLORS.cyan}   strokeWidth={2} dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="precoVendaBrl" name="Preço final"  stroke={CHART_COLORS.orange} strokeWidth={3} dot={{ r: 5 }} />
+                  <Line type="monotone" dataKey="lucroMes"      name="Lucro/mês"    stroke={CHART_COLORS.green}  strokeWidth={2} dot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="overflow-x-auto mt-3">
+              <table className="w-full text-xs font-mono">
+                <thead>
+                  <tr className="text-[10px] uppercase text-[var(--tts-muted)] border-b border-[var(--tts-border)]">
+                    <th className="text-left p-2">Números</th>
+                    <th className="text-right p-2">Disparos/mês</th>
+                    <th className="text-right p-2">Custo total</th>
+                    <th className="text-right p-2">Preço final</th>
+                    <th className="text-right p-2">Lucro/mês</th>
+                    <th className="text-right p-2">Custo/disparo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sensibilidade.map(s => {
+                    const isAtual = s.numeros === quantidadeNumeros;
+                    return (
+                      <tr key={s.numeros} className={`border-b border-[var(--tts-border)]/60 ${isAtual ? "bg-[var(--tts-surface-2)]" : ""}`}>
+                        <td className="p-2">
+                          <span className={isAtual ? "font-bold text-[var(--tts-orange)]" : ""}>{s.numeros} nº</span>
+                          {isAtual && <span className="ml-1 text-[9px]">★ atual</span>}
+                        </td>
+                        <td className="p-2 text-right">{fmtNum(s.disparos)}</td>
+                        <td className="p-2 text-right">{fmtBRL(s.custoTotalBrl)}</td>
+                        <td className="p-2 text-right font-bold" style={{ color: "var(--tts-orange)" }}>{fmtBRL(s.precoVendaBrl)}</td>
+                        <td className="p-2 text-right" style={{ color: "var(--tts-green)" }}>{fmtBRL(s.lucroMes)}</td>
+                        <td className="p-2 text-right text-[var(--tts-muted)]">{fmtBRL(s.custoPorDisparo)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
         {/* Por que vale a pena (área comercial) */}
         <section>
           <SectionTitle icon={<Sparkles className="size-4" />} title="Por que vale a pena" hint="Resumo de valor para o cliente" />
