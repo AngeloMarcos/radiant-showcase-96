@@ -1208,6 +1208,15 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
   );
 }
 
+function Row({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="flex justify-between text-[var(--tts-muted)]">
+      <span>{k}</span>
+      <span className="text-[var(--tts-text)]">{v}</span>
+    </div>
+  );
+}
+
 function SectionTitle({ icon, title, hint }: { icon: React.ReactNode; title: string; hint?: string }) {
   return (
     <div className="flex items-end justify-between mb-4">
