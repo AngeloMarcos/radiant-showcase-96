@@ -91,6 +91,31 @@ export function Calculator() {
   const [moPlanoId, setMoPlanoId] = useState<MoPlanoId>("padrao");
   const [moCustomAtivo, setMoCustomAtivo] = useState(false);
   const [moPrecoCustom, setMoPrecoCustom] = useState(220); // R$/número customizado
+  // ===== Funil de retorno =====
+  const [funilCenarioId, setFunilCenarioId] = useState<CenarioFunilId>("provavel");
+  const [funilTaxas, setFunilTaxas] = useState<TaxasFunil>(() => {
+    const c = CENARIOS_FUNIL.provavel;
+    return {
+      taxaAbertura: c.taxaAbertura,
+      taxaEscutaAudio: c.taxaEscutaAudio,
+      taxaResposta: c.taxaResposta,
+      taxaConversaValida: c.taxaConversaValida,
+      taxaQualificacaoLead: c.taxaQualificacaoLead,
+      taxaIntencaoVoto: c.taxaIntencaoVoto,
+    };
+  });
+  function aplicarCenarioFunil(id: CenarioFunilId) {
+    const c = CENARIOS_FUNIL[id];
+    setFunilCenarioId(id);
+    setFunilTaxas({
+      taxaAbertura: c.taxaAbertura,
+      taxaEscutaAudio: c.taxaEscutaAudio,
+      taxaResposta: c.taxaResposta,
+      taxaConversaValida: c.taxaConversaValida,
+      taxaQualificacaoLead: c.taxaQualificacaoLead,
+      taxaIntencaoVoto: c.taxaIntencaoVoto,
+    });
+  }
   const [cambio, setCambio] = useState(5.80);
   const [setup, setSetup] = useState(4500);
   const [ferramentaAudio, setFerramentaAudio] = useState<AudioTool>("elevenlabs");
