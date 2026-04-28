@@ -1141,8 +1141,8 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                   label="Disparos no mês 1"
                   value={rampDisparosIni}
                   onChange={(v) => { setRampDisparosIni(v); setRampPreset(null); }}
-                  min={500} max={Math.max(500, totalDisparos)} step={500}
-                  hint={`Meta no mês ${rampMeses}: ${fmtNum(totalDisparos)}`}
+                  min={500} max={Math.max(500, disparosEfetivos)} step={500}
+                  hint={`Meta no mês ${rampMeses}: ${fmtNum(disparosEfetivos)}`}
                 />
                 <SliderInput
                   label="% Áudio no mês 1"
