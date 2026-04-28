@@ -236,7 +236,6 @@ export function Calculator() {
 
   function aplicarCenario(c: Cenario) {
     setPctAudio(c.pctAudio);
-    setPctMo(c.pctMo);
   }
 
   // ===== Texto da proposta (compartilhado entre WhatsApp e PDF) =====
