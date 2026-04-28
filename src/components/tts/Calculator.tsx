@@ -1162,7 +1162,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                             </td>
                             <td className="p-3 text-right">{fmtNum(m.disparos)}</td>
                             <td className="p-3 text-right">{m.pctAudio.toFixed(0)}%</td>
-                            <td className="p-3 text-right">{fmtBRL(m.custoMoBrl)} <span className="text-[var(--tts-muted)]">({m.pctMo.toFixed(0)}%)</span></td>
+                            <td className="p-3 text-right">{m.numeros} <span className="text-[var(--tts-muted)]">({fmtBRL(m.custoMoBrl)})</span></td>
                             <td className="p-3 text-right">{fmtBRL(m.custoTotal)}</td>
                             <td className="p-3 text-right">{fmtBRL(m.precoVenda)}</td>
                             <td className="p-3 text-right" style={{ color: "var(--tts-green)" }}>{fmtBRL(m.lucro)}</td>
