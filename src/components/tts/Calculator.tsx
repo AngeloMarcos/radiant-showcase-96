@@ -952,6 +952,44 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                     </tbody>
                   </table>
                 </div>
+
+                {/* Sensibilidade: impacto de qtd de números × planos */}
+                <div className="overflow-x-auto mt-4">
+                  <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-2">
+                    Sensibilidade · MO total/mês por quantidade de números
+                  </p>
+                  <table className="w-full text-xs font-mono">
+                    <thead>
+                      <tr className="text-[10px] uppercase text-[var(--tts-muted)] border-b border-[var(--tts-border)]">
+                        <th className="text-left p-2">Plano</th>
+                        {[10, 30, 50, 100].map(n => (
+                          <th key={n} className="text-right p-2">{n} nº</th>
+                        ))}
+                        <th className="text-right p-2 text-[var(--tts-orange)]">{quantidadeNumeros} nº (atual)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(Object.values(MO_PLANOS)).map(p => {
+                        const isSel = p.id === moPlanoId;
+                        return (
+                          <tr key={p.id} className={`border-b border-[var(--tts-border)]/60 ${isSel ? "bg-[var(--tts-surface-2)]" : ""}`}>
+                            <td className="p-2">
+                              <span className={isSel ? "font-bold text-[var(--tts-orange)]" : ""}>{p.nome}</span>
+                            </td>
+                            {[10, 30, 50, 100].map(n => (
+                              <td key={n} className="p-2 text-right">
+                                {fmtBRL(calcularMaoDeObraPorNumero(n, p.id))}
+                              </td>
+                            ))}
+                            <td className={`p-2 text-right font-bold ${isSel ? "text-[var(--tts-orange)]" : ""}`}>
+                              {fmtBRL(calcularMaoDeObraPorNumero(quantidadeNumeros, p.id))}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             );
           })()}
