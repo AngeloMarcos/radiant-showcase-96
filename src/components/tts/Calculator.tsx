@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   calcMinutos, calcElevenLabs, calcPlayht, calcPolly, calcGpt, calcVenda,
   calcPlanos, calcAnual, calcRampUp, calcEscalaPorNumero, calcSensibilidadePorNumero,
+  calcCondicaoCampanha, calcCenariosCampanha,
   GPT_PRICES, fmtBRL, fmtUSD, fmtNum,
   calcularMaoDeObraPorNumero, calcularPercentualMaoDeObra,
   aplicarPisoMargem, MARGEM_MINIMA_OBRIGATORIA, MARGEM_PADRAO,
@@ -19,6 +20,7 @@ import {
   Calculator as CalcIcon, Mic, MessageSquare, Wrench, TrendingUp,
   AlertTriangle, Lightbulb, Copy, Check, Sparkles, Sun, Moon,
   RotateCcw, Save, Clock, Printer, FileDown, Presentation,
+  CalendarClock, ShieldCheck, ShieldAlert,
 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { PresentationMode } from "./PresentationMode";
