@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useEffect, useState } from "react";
-import { X, ChevronLeft, ChevronRight, Check, Sparkles, Maximize2 } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Check, Sparkles } from "lucide-react";
 import { fmtBRL, fmtNum, calcPlanos } from "./lib/calc";
 
 type Plano = ReturnType<typeof calcPlanos>[number];
