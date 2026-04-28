@@ -418,6 +418,89 @@ export function calcPlanos(
   ];
 }
 
+// ============= CONDIÇÃO ESPECIAL DE CAMPANHA (pagamento diferido) =============
+// Para candidatos sem caixa imediato: divide a MÃO DE OBRA entre "agora" e "depois".
+// Custos técnicos (APIs + infra) e a margem ficam SEMPRE no "agora" para você não
+// financiar o cliente do seu bolso. Saldo da MO é programado para liberação da verba.
+export interface CondicaoCampanhaInput {
+  custoTecnicoBrl: number;   // GPT + áudio + infra
+  maoDeObraBrl: number;      // mão de obra total (já calculada por nº × plano)
+  precoVenda: number;        // preço final cheio
+  pctEntradaMO: number;      // 0..100 — quanto da MO entra agora
+  reservaMinima: number;     // BRL — folga mínima sobre o custo técnico
+}
+
+export interface CondicaoCampanhaOutput {
+  custoTecnicoTotal: number;
+  maoDeObraTotal: number;
+  margemBrl: number;
+  precoTotal: number;
+  entradaMaoDeObra: number;
+  saldoMaoDeObra: number;
+  valorPagoAgora: number;
+  valorPagoDepois: number;
+  percentualPagoAgora: number;
+  percentualPagoDepois: number;
+  coberturaTecnica: number;     // valorPagoAgora - custoTecnico
+  coberturaComReserva: number;  // ... - reservaMinima
+  risco: "ok" | "medio" | "alto";
+  pctEntradaMinimaSegura: number; // % de MO que zera o risco
+}
+
+export function calcCondicaoCampanha(i: CondicaoCampanhaInput): CondicaoCampanhaOutput {
+  const custoTecnicoTotal = Math.max(0, i.custoTecnicoBrl);
+  const maoDeObraTotal    = Math.max(0, i.maoDeObraBrl);
+  const margemBrl         = Math.max(0, i.precoVenda - (custoTecnicoTotal + maoDeObraTotal));
+  const precoTotal        = custoTecnicoTotal + maoDeObraTotal + margemBrl;
+
+  const pct = Math.max(0, Math.min(100, i.pctEntradaMO));
+  const entradaMaoDeObra = maoDeObraTotal * (pct / 100);
+  const saldoMaoDeObra   = maoDeObraTotal - entradaMaoDeObra;
+
+  // Margem fica embutida no "agora" — você nunca financia seu próprio lucro.
+  const valorPagoAgora  = custoTecnicoTotal + entradaMaoDeObra + margemBrl;
+  const valorPagoDepois = saldoMaoDeObra;
+
+  const percentualPagoAgora  = precoTotal > 0 ? (valorPagoAgora  / precoTotal) * 100 : 0;
+  const percentualPagoDepois = precoTotal > 0 ? (valorPagoDepois / precoTotal) * 100 : 0;
+
+  const coberturaTecnica    = valorPagoAgora - custoTecnicoTotal;
+  const coberturaComReserva = coberturaTecnica - i.reservaMinima;
+
+  const risco: "ok" | "medio" | "alto" =
+    coberturaTecnica < 0 ? "alto" :
+    coberturaComReserva < 0 ? "medio" : "ok";
+
+  // Entrada mínima de MO (em %) que cobre técnico + reserva.
+  // valorPagoAgora >= custoTecnico + reserva
+  // => entradaMaoDeObra >= reserva - margemBrl   (técnico já está no agora)
+  // => pct >= max(0, (reserva - margemBrl) / maoDeObraTotal * 100)
+  const faltaParaCobrir = Math.max(0, i.reservaMinima - margemBrl);
+  const pctEntradaMinimaSegura = maoDeObraTotal > 0
+    ? Math.min(100, (faltaParaCobrir / maoDeObraTotal) * 100)
+    : 0;
+
+  return {
+    custoTecnicoTotal, maoDeObraTotal, margemBrl, precoTotal,
+    entradaMaoDeObra, saldoMaoDeObra,
+    valorPagoAgora, valorPagoDepois,
+    percentualPagoAgora, percentualPagoDepois,
+    coberturaTecnica, coberturaComReserva, risco,
+    pctEntradaMinimaSegura,
+  };
+}
+
+// Cenários comparativos (30/40/50/60% de entrada da MO) para o gráfico C.
+export function calcCenariosCampanha(
+  base: Omit<CondicaoCampanhaInput, "pctEntradaMO">,
+  pcts: number[] = [30, 40, 50, 60],
+): { pct: number; agora: number; depois: number; risco: "ok"|"medio"|"alto" }[] {
+  return pcts.map(pct => {
+    const r = calcCondicaoCampanha({ ...base, pctEntradaMO: pct });
+    return { pct, agora: r.valorPagoAgora, depois: r.valorPagoDepois, risco: r.risco };
+  });
+}
+
 // ============= SENSIBILIDADE POR QUANTIDADE DE NÚMEROS =============
 // Recalcula tudo para uma dada qtd de números, mantendo os mesmos parâmetros base.
 export interface SensibilidadeInput {
