@@ -613,13 +613,30 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
               )}
               <SliderInput label="Duração / áudio"    value={duracaoSeg}    onChange={setDuracaoSeg}    min={5} max={120} suffix="s" />
               <SliderInput label="Tokens / msg texto" value={tokensPorMsg}  onChange={setTokensPorMsg}  min={50} max={2000} step={10} />
-              <SliderInput
-                label="Números WhatsApp ativos"
-                value={quantidadeNumeros}
-                onChange={setQuantidadeNumeros}
-                min={1} max={200} step={1}
-                hint={`MO ${moPlanoSel.nome}: ${fmtBRL(calc.custoMoBrl)}/mês (${calc.pctMoNoTotal.toFixed(1)}% do total)`}
-              />
+              <div className="space-y-2">
+                <SliderInput
+                  label="Números WhatsApp ativos"
+                  value={quantidadeNumeros}
+                  onChange={setQuantidadeNumeros}
+                  min={1} max={200} step={1}
+                  hint={`MO ${moPlanoSel.nome}: ${fmtBRL(calc.custoMoBrl)}/mês (${calc.pctMoNoTotal.toFixed(1)}% do total)`}
+                />
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="text-[9px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mr-1 self-center">
+                    Presets:
+                  </span>
+                  {[10, 30, 50, 100].map(n => (
+                    <button
+                      key={n}
+                      onClick={() => setQuantidadeNumeros(n)}
+                      className={`tts-btn !text-[10px] !py-1 !px-2.5 ${quantidadeNumeros === n ? "tts-btn-active" : ""}`}
+                      title={`Aplicar ${n} números e recalcular tudo`}
+                    >
+                      {n} nº
+                    </button>
+                  ))}
+                </div>
+              </div>
               {modoEscala === "porNumero" && (
                 <NumberField
                   label="Custo infra / número (R$)"
