@@ -288,56 +288,195 @@ export function calcVenda(custoTotalMes: number, setup: number, margem = 0.40) {
   return { precoVenda, lucroMes, margemPct, faturamentoAnual };
 }
 
+// ============= REGRAS DE MARGEM E SEGURANÇA =============
+// Margem mínima obrigatória — abaixo disso, dispara alerta visual.
+export const MARGEM_MINIMA_OBRIGATORIA = 0.35;          // 35%
+export const MARGEM_PADRAO              = 0.40;          // alvo de operação
+export const MARGEM_PROFISSIONAL        = 0.45;          // alvo do plano âncora
+export const MARGEM_PREMIUM             = 0.55;          // alvo do plano premium
+export const PRECO_MIN_POR_NUMERO       = 280;           // piso comercial / nº ativo
+
+// Garante margem mínima ao calcular preço final.
+export function aplicarPisoMargem(custoTotalMes: number, precoSugerido: number, margemMin = MARGEM_MINIMA_OBRIGATORIA): number {
+  const precoMin = custoTotalMes / (1 - margemMin);
+  return Math.max(precoSugerido, precoMin);
+}
+
+export type PlanoTier = "essencial" | "profissional" | "premium";
+
 export interface PlanoOferta {
+  id: PlanoTier;
   nome: string;
   preco: number;
   setup: number;
   features: string[];
   destaque: boolean;
+  badge?: string;
+  subtitulo: string;
+  margemAlvo: number;          // 0..1
+  margemReal: number;          // calculada
+  lucroMes: number;
+  capacidadeDisparos: number;  // capacidade sugerida no plano
+  qualidadeAudio: AudioQuality;
+  sla: string;
+  acompanhamento: string;
+  prioridade: string;
+  recomendadoPara: string;
 }
 
-export function calcPlanos(precoVenda: number, setup: number): PlanoOferta[] {
-  return [
-    {
-      nome: "Starter",
-      preco: precoVenda * 0.85,
-      setup: setup * 0.8,
-      features: [
-        "Até o volume contratado",
-        "Áudio + texto via WhatsApp",
-        "Suporte em horário comercial",
-        "Relatório mensal básico",
-      ],
+// Gera os 3 planos comerciais a partir do custo base.
+// Estrutura âncora: Essencial (entrada), Profissional (recomendado), Premium (âncora alta).
+export function calcPlanos(
+  custoTotalMes: number,
+  setup: number,
+  capacidadeBaseDisparos: number,
+): PlanoOferta[] {
+  const mk = (tier: PlanoTier, margem: number, multSetup: number, multCapac: number): PlanoOferta => {
+    const precoBruto = custoTotalMes / (1 - margem);
+    const preco = aplicarPisoMargem(custoTotalMes, precoBruto);
+    const lucroMes = preco - custoTotalMes;
+    const margemReal = preco > 0 ? lucroMes / preco : 0;
+    const capacidade = Math.round(capacidadeBaseDisparos * multCapac);
+    const setupPlano = Math.round(setup * multSetup);
+
+    if (tier === "essencial") {
+      return {
+        id: "essencial", nome: "Essencial",
+        subtitulo: "Operação inicial enxuta",
+        preco, setup: setupPlano, lucroMes, margemReal,
+        margemAlvo: margem, capacidadeDisparos: capacidade,
+        qualidadeAudio: "good",
+        sla: "Resposta em até 24h úteis",
+        acompanhamento: "Relatório mensal",
+        prioridade: "Padrão",
+        recomendadoPara: "Início de operação · até 10 números",
+        destaque: false,
+        features: [
+          "Áudio em qualidade WhatsApp (Bom)",
+          `Capacidade até ${capacidade.toLocaleString("pt-BR")} disparos/mês`,
+          "Mão de obra em horário comercial",
+          "Suporte por WhatsApp · resposta em 24h",
+          "Relatório mensal de entregas",
+        ],
+      };
+    }
+
+    if (tier === "profissional") {
+      return {
+        id: "profissional", nome: "Profissional",
+        subtitulo: "O melhor custo-benefício",
+        preco, setup: setupPlano, lucroMes, margemReal,
+        margemAlvo: margem, capacidadeDisparos: capacidade,
+        qualidadeAudio: "professional",
+        sla: "Resposta em até 4h úteis · ajustes em 24h",
+        acompanhamento: "Acompanhamento semanal + dashboard",
+        prioridade: "Alta",
+        recomendadoPara: "Campanhas políticas · 30+ números",
+        destaque: true,
+        badge: "Mais escolhido",
+        features: [
+          "Áudio profissional (192 kbps · voice cloning)",
+          `Capacidade até ${capacidade.toLocaleString("pt-BR")} disparos/mês`,
+          "Mão de obra dedicada · ajustes semanais",
+          "Suporte estendido · resposta em até 4h",
+          "Dashboard de entregas em tempo real",
+          "Otimização contínua de prompts e voz",
+          "A/B testing de áudios",
+        ],
+      };
+    }
+
+    return {
+      id: "premium", nome: "Premium",
+      subtitulo: "Operação assistida total",
+      preco, setup: setupPlano, lucroMes, margemReal,
+      margemAlvo: margem, capacidadeDisparos: capacidade,
+      qualidadeAudio: "studio",
+      sla: "SLA 1h · ajustes em tempo real",
+      acompanhamento: "Gerente de conta dedicado · daily",
+      prioridade: "Máxima",
+      recomendadoPara: "Operação enterprise · 50+ números",
       destaque: false,
-    },
-    {
-      nome: "Pro",
-      preco: precoVenda,
-      setup,
+      badge: "Para quem quer o máximo",
       features: [
-        "Volume contratado + 20% de folga",
-        "Áudio + texto via WhatsApp",
-        "Suporte estendido",
-        "Dashboard de entregas",
-        "Ajustes de fluxo trimestrais",
-      ],
-      destaque: true,
-    },
-    {
-      nome: "Premium",
-      preco: precoVenda * 1.28,
-      setup: setup * 1.4,
-      features: [
-        "Volume ilimitado dentro do plano",
-        "Áudio + texto via WhatsApp",
-        "Suporte 24h com SLA",
-        "Dashboard avançado em tempo real",
-        "Ajustes mensais e A/B testing",
+        "Áudio estúdio (44.1kHz PCM)",
+        `Capacidade até ${capacidade.toLocaleString("pt-BR")} disparos/mês`,
         "Gerente de conta dedicado",
+        "Suporte 24h com SLA garantido",
+        "Dashboard avançado + alertas",
+        "A/B testing automatizado",
+        "Reuniões semanais de performance",
+        "Prioridade máxima na fila de produção",
       ],
-      destaque: false,
-    },
+    };
+  };
+
+  return [
+    mk("essencial",    0.40, 0.85, 1.00),
+    mk("profissional", MARGEM_PROFISSIONAL, 1.00, 1.20),
+    mk("premium",      MARGEM_PREMIUM,     1.40, 2.00),
   ];
+}
+
+// ============= SENSIBILIDADE POR QUANTIDADE DE NÚMEROS =============
+// Recalcula tudo para uma dada qtd de números, mantendo os mesmos parâmetros base.
+export interface SensibilidadeInput {
+  quantidadesNumeros: number[];
+  disparosPorNumero: number;
+  audiosPorNumero: number;
+  duracaoSeg: number;
+  tokensPorMsg: number;
+  modeloGpt: GptModel;
+  qualidade: AudioQuality;
+  custoInfraPorNumero: number;
+  moPlanoId: MoPlanoId;
+  cambio: number;
+  setup: number;
+  margem?: number;
+}
+
+export interface SensibilidadePonto {
+  numeros: number;
+  disparos: number;
+  minutosAudio: number;
+  custoTotalBrl: number;
+  precoVendaBrl: number;
+  lucroMes: number;
+  custoPorNumero: number;
+  custoPorDisparo: number;
+}
+
+export function calcSensibilidadePorNumero(i: SensibilidadeInput): SensibilidadePonto[] {
+  const margem = i.margem ?? MARGEM_PADRAO;
+  return i.quantidadesNumeros.map(q => {
+    const escala = calcEscalaPorNumero({
+      quantidadeNumeros: q,
+      disparosPorNumero: i.disparosPorNumero,
+      audiosPorNumero: i.audiosPorNumero,
+      duracaoMediaSeg: i.duracaoSeg,
+      tokensPorMsg: i.tokensPorMsg,
+      custoInfraPorNumero: i.custoInfraPorNumero,
+    });
+    const eleven = calcElevenLabs(escala.minutosTotaisAudio, i.qualidade);
+    const gpt = calcGpt(escala.disparosTotais, escala.pctAudioDerivado, i.tokensPorMsg, i.modeloGpt);
+    const custoApiBrl = (eleven.totalUsd + gpt.totalUsd) * i.cambio;
+    const custoMo = calcularMaoDeObraPorNumero(q, i.moPlanoId);
+    const custoTotal = custoApiBrl + escala.custoInfraTotalBrl + custoMo;
+    const venda = calcVenda(custoTotal, i.setup, margem);
+    const precoFinal = aplicarPisoMargem(custoTotal, venda.precoVenda);
+    const lucro = precoFinal - custoTotal;
+    return {
+      numeros: q,
+      disparos: escala.disparosTotais,
+      minutosAudio: escala.minutosTotaisAudio,
+      custoTotalBrl: custoTotal,
+      precoVendaBrl: precoFinal,
+      lucroMes: lucro,
+      custoPorNumero: q > 0 ? custoTotal / q : 0,
+      custoPorDisparo: escala.disparosTotais > 0 ? custoTotal / escala.disparosTotais : 0,
+    };
+  });
+}
 }
 
 export function calcAnual(custoMes: number, precoVendaMes: number, setup: number) {
