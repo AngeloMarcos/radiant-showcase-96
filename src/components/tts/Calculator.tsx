@@ -948,6 +948,50 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                     </div>
                   </div>
 
+
+                  {/* Gráfico: crescimento proporcional de áudio, texto e MO */}
+                  <div className="tts-card p-4 md:p-6">
+                    <div className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">
+                      Crescimento proporcional — áudio, texto e mão de obra
+                    </div>
+                    <div style={{ width: "100%", height: 300 }}>
+                      <ResponsiveContainer>
+                        <LineChart
+                          data={rampData.map(m => ({
+                            mes: m.mes,
+                            audios: Math.round(m.audiosMes),
+                            textos: Math.round(m.disparos - m.audiosMes),
+                            moPct: Math.round(m.pctMo),
+                          }))}
+                          margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#1a2235" />
+                          <XAxis dataKey="mes" stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 12 }}
+                            tickFormatter={(v) => `M${v}`} />
+                          <YAxis yAxisId="left" stroke="#4f617a" tick={{ fill: "#94a3b8", fontSize: 11 }}
+                            tickFormatter={(v) => v >= 1000 ? (v / 1000).toFixed(1) + "k" : v.toFixed(0)} />
+                          <YAxis yAxisId="right" orientation="right" stroke="#4f617a"
+                            tick={{ fill: "#94a3b8", fontSize: 11 }}
+                            tickFormatter={(v) => `${v}%`} domain={[0, 100]} />
+                          <Tooltip
+                            contentStyle={{ background: "#0d1119", border: "1px solid #1a2235", borderRadius: 8, fontSize: 12, color: "#d8e4f5" }}
+                            labelFormatter={(l) => `Mês ${l}`}
+                            formatter={(v, name) =>
+                              name === "MO (% base)" ? `${v}%` : fmtNum(Number(v))
+                            }
+                          />
+                          <Legend wrapperStyle={{ fontSize: 12 }} />
+                          <Line yAxisId="left" type="monotone" dataKey="audios" stroke={CHART_COLORS.purple}
+                            strokeWidth={2} dot={{ r: 3 }} name="Áudios/mês" />
+                          <Line yAxisId="left" type="monotone" dataKey="textos" stroke={CHART_COLORS.cyan}
+                            strokeWidth={2} dot={{ r: 3 }} name="Textos/mês" />
+                          <Line yAxisId="right" type="monotone" dataKey="moPct" stroke={CHART_COLORS.orange}
+                            strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} name="MO (% base)" />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
                   <div className="tts-card overflow-x-auto">
                     <table className="w-full text-xs font-mono">
                       <thead>
