@@ -166,6 +166,7 @@ export function Calculator() {
   const [rampDisparosIni, setRampDisparosIni] = useState(1500);
   const [rampPctAudioIni, setRampPctAudioIni] = useState(10);
   const [rampNumerosIni, setRampNumerosIni] = useState(5);
+  const [rampPreset, setRampPreset] = useState<number | "full" | null>(null);
 
   const rampData = useMemo<RampMes[]>(() => {
     if (!rampAtivo) return [];
