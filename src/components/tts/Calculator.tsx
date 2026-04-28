@@ -1172,8 +1172,8 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                       key={n}
                       onClick={() => {
                         setRampMeses(n);
-                        setRampDisparosIni(Math.max(500, Math.round(totalDisparos / n / 500) * 500));
-                        setRampPctAudioIni(Math.round(pctAudio / n));
+                        setRampDisparosIni(Math.max(500, Math.round(disparosEfetivos / n / 500) * 500));
+                        setRampPctAudioIni(Math.round(pctAudioEfetivo / n));
                         setRampNumerosIni(Math.max(1, Math.round(quantidadeNumeros / n)));
                         setRampPreset(n);
                       }}
@@ -1186,8 +1186,8 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                 })}
                 <button
                   onClick={() => {
-                    setRampDisparosIni(totalDisparos);
-                    setRampPctAudioIni(pctAudio);
+                    setRampDisparosIni(disparosEfetivos);
+                    setRampPctAudioIni(pctAudioEfetivo);
                     setRampNumerosIni(quantidadeNumeros);
                     setRampPreset("full");
                   }}
