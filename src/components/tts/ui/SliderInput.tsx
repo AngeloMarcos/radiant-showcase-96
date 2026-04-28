@@ -27,7 +27,7 @@ export function SliderInput({ label, value, onChange, min, max, step = 1, suffix
             max={max}
             step={step}
             onChange={(e) => {
-              const v = Number(e.target.value);
+              const v = parseFloat(e.target.value);
               if (!Number.isNaN(v)) onChange(Math.min(max, Math.max(min, v)));
             }}
           />

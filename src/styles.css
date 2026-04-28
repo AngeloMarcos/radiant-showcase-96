@@ -267,3 +267,68 @@
 .tts-app ::-webkit-scrollbar-track { background: var(--tts-bg); }
 .tts-app ::-webkit-scrollbar-thumb { background: var(--tts-border); border-radius: 8px; }
 .tts-app ::-webkit-scrollbar-thumb:hover { background: var(--tts-orange); }
+
+/* ============ TEMA CLARO ============ */
+.tts-app.tts-light {
+  --tts-bg: #f8fafc;
+  --tts-surface: #ffffff;
+  --tts-surface-2: #f1f5f9;
+  --tts-border: #e2e8f0;
+  --tts-border-strong: #cbd5e1;
+  --tts-orange: #ea5a1b;
+  --tts-orange-dim: rgba(234,90,27,.12);
+  --tts-cyan: #0891b2;
+  --tts-cyan-dim: rgba(8,145,178,.12);
+  --tts-green: #16a34a;
+  --tts-green-dim: rgba(22,163,74,.12);
+  --tts-red: #dc2626;
+  --tts-red-dim: rgba(220,38,38,.12);
+  --tts-gold: #d97706;
+  --tts-gold-dim: rgba(217,119,6,.12);
+  --tts-text: #0f172a;
+  --tts-muted: #64748b;
+  --tts-purple: #7c3aed;
+}
+
+.tts-app.tts-light.tts-grid-bg {
+  background-image:
+    linear-gradient(rgba(203,213,225,.6) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(203,213,225,.6) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.tts-app.tts-light .tts-input { background: #f1f5f9; color: #0f172a; }
+
+.tts-app.tts-light .tts-card,
+.tts-app.tts-light .tts-card-elevated {
+  box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+}
+
+.tts-app.tts-light ::-webkit-scrollbar-track { background: #f1f5f9; }
+.tts-app.tts-light ::-webkit-scrollbar-thumb { background: #cbd5e1; }
+.tts-app.tts-light ::-webkit-scrollbar-thumb:hover { background: var(--tts-orange); }
+
+/* ============ PRINT ============ */
+@media print {
+  .tts-app {
+    background: white !important;
+    color: #0f172a !important;
+    --tts-bg: #ffffff;
+    --tts-surface: #ffffff;
+    --tts-surface-2: #f8fafc;
+    --tts-border: #e2e8f0;
+    --tts-text: #0f172a;
+    --tts-muted: #64748b;
+    --tts-orange: #ea5a1b;
+    --tts-green: #16a34a;
+    --tts-cyan: #0891b2;
+  }
+  .tts-app > div > *:not(.tts-print-section) { display: none !important; }
+  .tts-app > div > .tts-print-section { display: block !important; }
+  .tts-card, .tts-card-elevated {
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: none !important;
+  }
+  .tts-grid-bg { background-image: none !important; }
+  @page { margin: 20mm; }
+}
