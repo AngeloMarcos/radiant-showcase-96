@@ -483,21 +483,27 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
         <section>
           <SectionTitle icon={<Sparkles className="size-4" />} title="Cenários rápidos" hint="Aplique presets aos sliders" />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {CENARIOS.map(c => (
-              <button
-                key={c.nome}
-                onClick={() => aplicarCenario(c)}
-                className={`tts-card p-4 text-left group transition-all hover:-translate-y-0.5 ${
-                  c.recomendado ? "!border-[var(--tts-orange)]" : ""
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-display font-bold text-sm">{c.nome}</span>
-                  {c.recomendado && <span className="tts-badge tts-badge-orange">Recomendado</span>}
-                </div>
-                <p className="text-xs text-[var(--tts-muted)] font-mono">{c.descricao}</p>
-              </button>
-            ))}
+            {CENARIOS.map(c => {
+              const isSel = pctAudio === c.pctAudio && modoEscala === "manual";
+              return (
+                <button
+                  key={c.nome}
+                  onClick={() => { setModoEscala("manual"); aplicarCenario(c); }}
+                  className={`tts-card p-4 text-left group transition-all hover:-translate-y-0.5 ${
+                    isSel ? "!border-[var(--tts-orange)] tts-card-active" :
+                    c.recomendado ? "!border-[var(--tts-orange)]/50" : ""
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`font-display font-bold text-sm ${isSel ? "text-[var(--tts-orange)]" : ""}`}>{c.nome}</span>
+                    {isSel
+                      ? <span className="tts-badge tts-badge-orange">Selecionado</span>
+                      : c.recomendado && <span className="tts-badge tts-badge-orange">Recomendado</span>}
+                  </div>
+                  <p className="text-xs text-[var(--tts-muted)] font-mono">{c.descricao}</p>
+                </button>
+              );
+            })}
           </div>
         </section>
 
