@@ -417,7 +417,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
     { item: `Mão de obra · ${moPlanoSel.nome} (${quantidadeNumeros} números × ${fmtBRL(moPlanoSel.precoPorNumero)})`, usd: null as number | null, brl: calc.custoMoBrl },
   ];
   const subtotalApiBrl = calc.custoApiBrl;
-  const textosMes = totalDisparos * (1 - pctAudio / 100);
+  const textosMes = disparosEfetivos * (1 - pctAudioEfetivo / 100);
 
   return (
     <div className={`tts-app tts-grid-bg ${tema === "light" ? "tts-light" : ""}`}>
@@ -651,7 +651,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
             <StatCard label="Custo API / mês" value={fmtBRL(calc.custoApiBrl)} sub={fmtUSD(calc.custoApiUsd)} accent="cyan" />
             <StatCard label="Mão de obra / mês" value={fmtBRL(calc.custoMoBrl)} sub={`${quantidadeNumeros} nº × ${fmtBRL(moPlanoSel.precoPorNumero)} (${moPlanoSel.nome})`} />
             <StatCard label="Custo total / mês" value={fmtBRL(calc.custoTotalMes)} accent="orange" large />
-            <StatCard label="Custo / disparo" value={totalDisparos > 0 ? fmtBRL(calc.custoTotalMes / totalDisparos) : "R$ 0,00"} sub="custo total ÷ disparos" accent="cyan" />
+            <StatCard label="Custo / disparo" value={fmtBRL(calc.custoPorDisparo)} sub={`${fmtNum(disparosEfetivos)} disparos · custo total ÷ disparos`} accent="cyan" />
             <StatCard label="1º mês (com setup)" value={fmtBRL(calc.custoPrimeiroMes)} sub={`+ ${fmtBRL(setup)} setup`} accent="gold" />
             <StatCard label="Preço de venda" value={fmtBRL(calc.precoVenda)} sub="margem 40%" accent="green" large />
             <StatCard label="Lucro / mês" value={fmtBRL(calc.lucroMes)} sub={`${calc.margemPct.toFixed(1)}% de margem`} accent="green" />
