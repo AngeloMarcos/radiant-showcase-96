@@ -855,7 +855,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                   key={p.id}
                   onClick={() => setMoPlanoId(p.id)}
                   className={`tts-card p-5 text-left transition-all hover:-translate-y-0.5 ${
-                    isSel ? "!border-[var(--tts-orange)]" : ""
+                    isSel ? "!border-[var(--tts-orange)] tts-card-active" : ""
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
