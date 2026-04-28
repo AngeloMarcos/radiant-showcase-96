@@ -96,8 +96,10 @@ export const MO_PLANOS: Record<MoPlanoId, MoPlano> = {
 export function calcularMaoDeObraPorNumero(
   quantidadeNumeros: number,
   plano: MoPlanoId,
+  precoOverride?: number,
 ): number {
-  const preco = Math.max(MO_PLANOS[plano].precoPorNumero, MO_PRECO_MINIMO_POR_NUMERO);
+  const base = precoOverride != null ? precoOverride : MO_PLANOS[plano].precoPorNumero;
+  const preco = Math.max(base, MO_PRECO_MINIMO_POR_NUMERO);
   return Math.max(0, quantidadeNumeros) * preco;
 }
 
