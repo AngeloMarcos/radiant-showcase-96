@@ -165,7 +165,7 @@ export function Calculator() {
   const [rampMeses, setRampMeses] = useState(6);
   const [rampDisparosIni, setRampDisparosIni] = useState(1500);
   const [rampPctAudioIni, setRampPctAudioIni] = useState(10);
-  const [rampPctMoIni, setRampPctMoIni] = useState(15);
+  const [rampNumerosIni, setRampNumerosIni] = useState(5);
 
   const rampData = useMemo<RampMes[]>(() => {
     if (!rampAtivo) return [];
@@ -179,15 +179,15 @@ export function Calculator() {
       tokensPorMsg,
       modeloGpt,
       ferramenta: ferramentaAudio === "comparar" ? "elevenlabs" : ferramentaAudio,
-      moBase,
-      pctMoInicial: rampPctMoIni,
-      pctMoFinal: pctMo,
+      numerosInicial: rampNumerosIni,
+      numerosFinal: quantidadeNumeros,
+      moPlanoId,
       cambio,
       setup,
     });
-  }, [rampAtivo, rampMeses, rampDisparosIni, rampPctAudioIni, rampPctMoIni,
+  }, [rampAtivo, rampMeses, rampDisparosIni, rampPctAudioIni, rampNumerosIni,
       totalDisparos, pctAudio, duracaoSeg, tokensPorMsg, modeloGpt,
-      ferramentaAudio, moBase, pctMo, cambio, setup]);
+      ferramentaAudio, quantidadeNumeros, moPlanoId, cambio, setup]);
 
   // ===== Gráfico de barras =====
   const chartData = useMemo(() => {
