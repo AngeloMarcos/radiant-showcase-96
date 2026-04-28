@@ -265,7 +265,13 @@
   background: var(--tts-gradient);
   color: #fff;
   border-color: transparent;
-  box-shadow: 0 0 20px rgba(139,92,246,.4);
+  box-shadow: 0 0 20px rgba(139,92,246,.45), inset 0 0 0 1px rgba(255,255,255,.15);
+  transform: translateY(-1px);
+}
+.tts-btn-active:hover { color: #fff; border-color: transparent; filter: brightness(1.05); }
+.tts-card-active {
+  box-shadow: 0 0 0 2px var(--tts-orange), 0 12px 32px -12px rgba(139,92,246,.4);
+  background: color-mix(in oklab, var(--tts-orange) 8%, var(--tts-surface));
 }
 
 .tts-input {

@@ -2,7 +2,8 @@ import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   calcMinutos, calcElevenLabs, calcPlayht, calcPolly, calcGpt, calcVenda,
-  calcPlanos, calcAnual, calcRampUp, GPT_PRICES, fmtBRL, fmtUSD, fmtNum,
+  calcPlanos, calcAnual, calcRampUp, calcEscalaPorNumero,
+  GPT_PRICES, fmtBRL, fmtUSD, fmtNum,
   calcularMaoDeObraPorNumero, calcularPercentualMaoDeObra,
   MO_PLANOS, MO_PRECO_LEGADO_POR_NUMERO,
   type GptModel, type RampMes, type AudioQuality, type MoPlanoId,
@@ -92,6 +93,12 @@ export function Calculator() {
   const [mostrarAnual, setMostrarAnual] = useState(false);
   const [copiado, setCopiado] = useState(false);
 
+  // ===== Modo de escala (proporcional por número) =====
+  const [modoEscala, setModoEscala] = useState<"manual" | "porNumero">("manual");
+  const [disparosPorNumero, setDisparosPorNumero] = useState(500);
+  const [audiosPorNumero, setAudiosPorNumero] = useState(150);
+  const [custoInfraPorNumero, setCustoInfraPorNumero] = useState(0);
+
   // ===== Histórico =====
   const [historico, setHistorico] = useState<SimulacaoSalva[]>([]);
   useEffect(() => {
@@ -103,13 +110,29 @@ export function Calculator() {
   const [mostrarHistorico, setMostrarHistorico] = useState(false);
   const [salvo, setSalvo] = useState(false);
 
+  // ===== Escala por número (modo proporcional) =====
+  // Quando ativo, disparos/pctAudio/infra são DERIVADOS da qtd de números.
+  const escala = useMemo(() => calcEscalaPorNumero({
+    quantidadeNumeros,
+    disparosPorNumero,
+    audiosPorNumero,
+    duracaoMediaSeg: duracaoSeg,
+    tokensPorMsg,
+    custoInfraPorNumero,
+  }), [quantidadeNumeros, disparosPorNumero, audiosPorNumero, duracaoSeg, tokensPorMsg, custoInfraPorNumero]);
+
+  // Valores efetivamente usados no cálculo (variam conforme o modo).
+  const disparosEfetivos = modoEscala === "porNumero" ? escala.disparosTotais : totalDisparos;
+  const pctAudioEfetivo  = modoEscala === "porNumero" ? escala.pctAudioDerivado : pctAudio;
+  const infraBrlEfetivo  = modoEscala === "porNumero" ? escala.custoInfraTotalBrl : 0;
+
   // ===== Cálculos memorizados =====
   const calc = useMemo(() => {
-    const { audiosMes, minutosMes } = calcMinutos(totalDisparos, pctAudio, duracaoSeg);
+    const { audiosMes, minutosMes } = calcMinutos(disparosEfetivos, pctAudioEfetivo, duracaoSeg);
     const eleven = calcElevenLabs(minutosMes, qualidade);
     const playht = calcPlayht(minutosMes);
     const polly = calcPolly(minutosMes);
-    const gpt = calcGpt(totalDisparos, pctAudio, tokensPorMsg, modeloGpt);
+    const gpt = calcGpt(disparosEfetivos, pctAudioEfetivo, tokensPorMsg, modeloGpt);
 
     const audioUsd =
       ferramentaAudio === "elevenlabs" ? eleven.totalUsd :
@@ -127,7 +150,7 @@ export function Calculator() {
     const custoTextoBrl = gpt.totalUsd * cambio;
     const custoApiUsd = audioUsd + gpt.totalUsd;
     const custoApiBrl = custoAudioBrl + custoTextoBrl;
-    const custoInfraBrl = 0; // n8n self-hosted
+    const custoInfraBrl = infraBrlEfetivo;
     const custoTecnicoBrl = custoApiBrl + custoInfraBrl;
 
     // Mão de obra: por número de WhatsApp ativo, conforme plano selecionado
@@ -144,6 +167,7 @@ export function Calculator() {
     const custoPrimeiroMes = custoTotalMes + setup;
     const venda = calcVenda(custoTotalMes, setup, 0.40);
     const custoPorNumero = quantidadeNumeros > 0 ? custoTotalMes / quantidadeNumeros : 0;
+    const custoPorDisparo = disparosEfetivos > 0 ? custoTotalMes / disparosEfetivos : 0;
 
     return {
       audiosMes, minutosMes,
@@ -151,11 +175,11 @@ export function Calculator() {
       audioUsd, audioLabel,
       custoAudioBrl, custoTextoBrl, custoInfraBrl, custoTecnicoBrl,
       custoApiUsd, custoApiBrl,
-      custoMoBrl, custoMoLegadoBrl, moPorPlano, pctMoNoTotal, custoPorNumero,
+      custoMoBrl, custoMoLegadoBrl, moPorPlano, pctMoNoTotal, custoPorNumero, custoPorDisparo,
       custoTotalMes, custoPrimeiroMes,
       ...venda,
     };
-  }, [totalDisparos, pctAudio, duracaoSeg, quantidadeNumeros, moPlanoId, cambio, setup, ferramentaAudio, qualidade, modeloGpt, tokensPorMsg]);
+  }, [disparosEfetivos, pctAudioEfetivo, duracaoSeg, quantidadeNumeros, moPlanoId, cambio, setup, ferramentaAudio, qualidade, modeloGpt, tokensPorMsg, infraBrlEfetivo]);
 
   const planos = useMemo(() => calcPlanos(calc.precoVenda, setup), [calc.precoVenda, setup]);
   const anual = useMemo(() => calcAnual(calc.custoTotalMes, calc.precoVenda, setup), [calc.custoTotalMes, calc.precoVenda, setup]);
@@ -173,9 +197,9 @@ export function Calculator() {
     return calcRampUp({
       meses: rampMeses,
       disparosInicial: rampDisparosIni,
-      disparosFinal: totalDisparos,
+      disparosFinal: disparosEfetivos,
       pctAudioInicial: rampPctAudioIni,
-      pctAudioFinal: pctAudio,
+      pctAudioFinal: pctAudioEfetivo,
       duracaoSeg,
       tokensPorMsg,
       modeloGpt,
@@ -187,7 +211,7 @@ export function Calculator() {
       setup,
     });
   }, [rampAtivo, rampMeses, rampDisparosIni, rampPctAudioIni, rampNumerosIni,
-      totalDisparos, pctAudio, duracaoSeg, tokensPorMsg, modeloGpt,
+      disparosEfetivos, pctAudioEfetivo, duracaoSeg, tokensPorMsg, modeloGpt,
       ferramentaAudio, quantidadeNumeros, moPlanoId, cambio, setup]);
 
   // ===== Gráfico de barras =====
@@ -393,7 +417,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
     { item: `Mão de obra · ${moPlanoSel.nome} (${quantidadeNumeros} números × ${fmtBRL(moPlanoSel.precoPorNumero)})`, usd: null as number | null, brl: calc.custoMoBrl },
   ];
   const subtotalApiBrl = calc.custoApiBrl;
-  const textosMes = totalDisparos * (1 - pctAudio / 100);
+  const textosMes = disparosEfetivos * (1 - pctAudioEfetivo / 100);
 
   return (
     <div className={`tts-app tts-grid-bg ${tema === "light" ? "tts-light" : ""}`}>
@@ -459,21 +483,27 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
         <section>
           <SectionTitle icon={<Sparkles className="size-4" />} title="Cenários rápidos" hint="Aplique presets aos sliders" />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {CENARIOS.map(c => (
-              <button
-                key={c.nome}
-                onClick={() => aplicarCenario(c)}
-                className={`tts-card p-4 text-left group transition-all hover:-translate-y-0.5 ${
-                  c.recomendado ? "!border-[var(--tts-orange)]" : ""
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-display font-bold text-sm">{c.nome}</span>
-                  {c.recomendado && <span className="tts-badge tts-badge-orange">Recomendado</span>}
-                </div>
-                <p className="text-xs text-[var(--tts-muted)] font-mono">{c.descricao}</p>
-              </button>
-            ))}
+            {CENARIOS.map(c => {
+              const isSel = pctAudio === c.pctAudio && modoEscala === "manual";
+              return (
+                <button
+                  key={c.nome}
+                  onClick={() => { setModoEscala("manual"); aplicarCenario(c); }}
+                  className={`tts-card p-4 text-left group transition-all hover:-translate-y-0.5 ${
+                    isSel ? "!border-[var(--tts-orange)] tts-card-active" :
+                    c.recomendado ? "!border-[var(--tts-orange)]/50" : ""
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`font-display font-bold text-sm ${isSel ? "text-[var(--tts-orange)]" : ""}`}>{c.nome}</span>
+                    {isSel
+                      ? <span className="tts-badge tts-badge-orange">Selecionado</span>
+                      : c.recomendado && <span className="tts-badge tts-badge-orange">Recomendado</span>}
+                  </div>
+                  <p className="text-xs text-[var(--tts-muted)] font-mono">{c.descricao}</p>
+                </button>
+              );
+            })}
           </div>
         </section>
 
@@ -496,15 +526,64 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
               />
             </div>
 
+            {/* Toggle modo manual / proporcional */}
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-2">
+                Modo de escala
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { id: "manual" as const, label: "Manual", hint: "Sliders independentes" },
+                  { id: "porNumero" as const, label: "Proporcional / nº", hint: "Tudo deriva da qtd de números" },
+                ]).map(m => (
+                  <button
+                    key={m.id}
+                    onClick={() => setModoEscala(m.id)}
+                    className={`tts-btn !text-xs flex-col !items-start !py-2 ${modoEscala === m.id ? "tts-btn-active" : ""}`}
+                    title={m.hint}
+                  >
+                    <span>{m.label}</span>
+                    <span className="text-[9px] font-mono normal-case opacity-80">{m.hint}</span>
+                  </button>
+                ))}
+              </div>
+              {modoEscala === "porNumero" && (
+                <p className="text-[11px] text-[var(--tts-muted)] font-mono mt-2 leading-relaxed">
+                  {escala.explicacao}
+                </p>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
-              <SliderInput label="Disparos / mês"     value={totalDisparos} onChange={setTotalDisparos} min={1000} max={500000} step={500} />
-              <SliderInput
-                label="% Áudio"
-                value={pctAudio}
-                onChange={setPctAudio}
-                min={0} max={100} suffix="%"
-                hint={`Texto: ${100 - pctAudio}% · ${fmtNum(textosMes)} msgs`}
-              />
+              {modoEscala === "manual" ? (
+                <>
+                  <SliderInput label="Disparos / mês" value={totalDisparos} onChange={setTotalDisparos} min={1000} max={500000} step={500} />
+                  <SliderInput
+                    label="% Áudio"
+                    value={pctAudio}
+                    onChange={setPctAudio}
+                    min={0} max={100} suffix="%"
+                    hint={`Texto: ${100 - pctAudio}% · ${fmtNum(textosMes)} msgs`}
+                  />
+                </>
+              ) : (
+                <>
+                  <SliderInput
+                    label="Disparos por número"
+                    value={disparosPorNumero}
+                    onChange={setDisparosPorNumero}
+                    min={50} max={5000} step={50}
+                    hint={`Total: ${fmtNum(escala.disparosTotais)} disparos/mês`}
+                  />
+                  <SliderInput
+                    label="Áudios por número"
+                    value={audiosPorNumero}
+                    onChange={setAudiosPorNumero}
+                    min={0} max={Math.max(50, disparosPorNumero)} step={10}
+                    hint={`${escala.pctAudioDerivado.toFixed(0)}% áudio · ${fmtNum(escala.audiosTotais)} áudios · ${fmtNum(escala.textosTotais)} textos`}
+                  />
+                </>
+              )}
               <SliderInput label="Duração / áudio"    value={duracaoSeg}    onChange={setDuracaoSeg}    min={5} max={120} suffix="s" />
               <SliderInput label="Tokens / msg texto" value={tokensPorMsg}  onChange={setTokensPorMsg}  min={50} max={2000} step={10} />
               <SliderInput
@@ -514,6 +593,15 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                 min={1} max={200} step={1}
                 hint={`MO ${moPlanoSel.nome}: ${fmtBRL(calc.custoMoBrl)}/mês (${calc.pctMoNoTotal.toFixed(1)}% do total)`}
               />
+              {modoEscala === "porNumero" && (
+                <NumberField
+                  label="Custo infra / número (R$)"
+                  value={custoInfraPorNumero}
+                  onChange={setCustoInfraPorNumero}
+                  step={5}
+                  prefix="R$"
+                />
+              )}
               <NumberField label="Câmbio USD → BRL" value={cambio} onChange={setCambio} step={0.05} prefix="R$" />
               <NumberField label="Setup (one-time)" value={setup}  onChange={setSetup}  step={100} prefix="R$" />
             </div>
@@ -627,7 +715,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
             <StatCard label="Custo API / mês" value={fmtBRL(calc.custoApiBrl)} sub={fmtUSD(calc.custoApiUsd)} accent="cyan" />
             <StatCard label="Mão de obra / mês" value={fmtBRL(calc.custoMoBrl)} sub={`${quantidadeNumeros} nº × ${fmtBRL(moPlanoSel.precoPorNumero)} (${moPlanoSel.nome})`} />
             <StatCard label="Custo total / mês" value={fmtBRL(calc.custoTotalMes)} accent="orange" large />
-            <StatCard label="Custo / disparo" value={totalDisparos > 0 ? fmtBRL(calc.custoTotalMes / totalDisparos) : "R$ 0,00"} sub="custo total ÷ disparos" accent="cyan" />
+            <StatCard label="Custo / disparo" value={fmtBRL(calc.custoPorDisparo)} sub={`${fmtNum(disparosEfetivos)} disparos · custo total ÷ disparos`} accent="cyan" />
             <StatCard label="1º mês (com setup)" value={fmtBRL(calc.custoPrimeiroMes)} sub={`+ ${fmtBRL(setup)} setup`} accent="gold" />
             <StatCard label="Preço de venda" value={fmtBRL(calc.precoVenda)} sub="margem 40%" accent="green" large />
             <StatCard label="Lucro / mês" value={fmtBRL(calc.lucroMes)} sub={`${calc.margemPct.toFixed(1)}% de margem`} accent="green" />
@@ -678,6 +766,16 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                     <span>Total ElevenLabs</span>
                     <span style={{ color: "var(--tts-orange)" }}>{fmtUSD(calc.eleven.totalUsd)}/mês</span>
                   </div>
+                </div>
+
+                {/* Motivo da recomendação */}
+                <div className="mt-4 p-3 rounded-md bg-[var(--tts-surface-2)] border border-[var(--tts-border)]">
+                  <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-1">
+                    Por que este plano?
+                  </p>
+                  <p className="text-[11px] font-mono leading-relaxed">
+                    {calc.eleven.motivoRecomendacao}
+                  </p>
                 </div>
               </div>
 
@@ -757,7 +855,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                   key={p.id}
                   onClick={() => setMoPlanoId(p.id)}
                   className={`tts-card p-5 text-left transition-all hover:-translate-y-0.5 ${
-                    isSel ? "!border-[var(--tts-orange)]" : ""
+                    isSel ? "!border-[var(--tts-orange)] tts-card-active" : ""
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -848,6 +946,44 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                             <td className="p-2 text-right">{fmtBRL(p.precoPorNumero)}</td>
                             <td className="p-2 text-right font-bold">{fmtBRL(total)}</td>
                             <td className="p-2 text-right">{pct.toFixed(1)}%</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Sensibilidade: impacto de qtd de números × planos */}
+                <div className="overflow-x-auto mt-4">
+                  <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-2">
+                    Sensibilidade · MO total/mês por quantidade de números
+                  </p>
+                  <table className="w-full text-xs font-mono">
+                    <thead>
+                      <tr className="text-[10px] uppercase text-[var(--tts-muted)] border-b border-[var(--tts-border)]">
+                        <th className="text-left p-2">Plano</th>
+                        {[10, 30, 50, 100].map(n => (
+                          <th key={n} className="text-right p-2">{n} nº</th>
+                        ))}
+                        <th className="text-right p-2 text-[var(--tts-orange)]">{quantidadeNumeros} nº (atual)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(Object.values(MO_PLANOS)).map(p => {
+                        const isSel = p.id === moPlanoId;
+                        return (
+                          <tr key={p.id} className={`border-b border-[var(--tts-border)]/60 ${isSel ? "bg-[var(--tts-surface-2)]" : ""}`}>
+                            <td className="p-2">
+                              <span className={isSel ? "font-bold text-[var(--tts-orange)]" : ""}>{p.nome}</span>
+                            </td>
+                            {[10, 30, 50, 100].map(n => (
+                              <td key={n} className="p-2 text-right">
+                                {fmtBRL(calcularMaoDeObraPorNumero(n, p.id))}
+                              </td>
+                            ))}
+                            <td className={`p-2 text-right font-bold ${isSel ? "text-[var(--tts-orange)]" : ""}`}>
+                              {fmtBRL(calcularMaoDeObraPorNumero(quantidadeNumeros, p.id))}
+                            </td>
                           </tr>
                         );
                       })}
@@ -1117,15 +1253,15 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                   label="Disparos no mês 1"
                   value={rampDisparosIni}
                   onChange={(v) => { setRampDisparosIni(v); setRampPreset(null); }}
-                  min={500} max={Math.max(500, totalDisparos)} step={500}
-                  hint={`Meta no mês ${rampMeses}: ${fmtNum(totalDisparos)}`}
+                  min={500} max={Math.max(500, disparosEfetivos)} step={500}
+                  hint={`Meta no mês ${rampMeses}: ${fmtNum(disparosEfetivos)}`}
                 />
                 <SliderInput
                   label="% Áudio no mês 1"
                   value={rampPctAudioIni}
                   onChange={(v) => { setRampPctAudioIni(v); setRampPreset(null); }}
                   min={0} max={100} suffix="%"
-                  hint={`Meta: ${pctAudio}%`}
+                  hint={`Meta: ${pctAudioEfetivo.toFixed(0)}%`}
                 />
                 <SliderInput
                   label="Números no mês 1"
@@ -1148,8 +1284,8 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                       key={n}
                       onClick={() => {
                         setRampMeses(n);
-                        setRampDisparosIni(Math.max(500, Math.round(totalDisparos / n / 500) * 500));
-                        setRampPctAudioIni(Math.round(pctAudio / n));
+                        setRampDisparosIni(Math.max(500, Math.round(disparosEfetivos / n / 500) * 500));
+                        setRampPctAudioIni(Math.round(pctAudioEfetivo / n));
                         setRampNumerosIni(Math.max(1, Math.round(quantidadeNumeros / n)));
                         setRampPreset(n);
                       }}
@@ -1162,8 +1298,8 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                 })}
                 <button
                   onClick={() => {
-                    setRampDisparosIni(totalDisparos);
-                    setRampPctAudioIni(pctAudio);
+                    setRampDisparosIni(disparosEfetivos);
+                    setRampPctAudioIni(pctAudioEfetivo);
                     setRampNumerosIni(quantidadeNumeros);
                     setRampPreset("full");
                   }}

@@ -109,6 +109,58 @@ export function calcularPercentualMaoDeObra(
   return total > 0 ? (maoDeObra / total) * 100 : 0;
 }
 
+// ============= ESCALA POR NÚMERO =============
+// Modo proporcional: tudo é derivado da quantidade de números ativos.
+export interface EscalaPorNumeroInput {
+  quantidadeNumeros: number;
+  disparosPorNumero: number;     // disparos/mês por número
+  audiosPorNumero: number;       // dos disparos, quantos são áudio (resto é texto)
+  duracaoMediaSeg: number;
+  tokensPorMsg: number;
+  custoInfraPorNumero: number;   // BRL/número (infra, gateway, etc.)
+}
+
+export interface EscalaPorNumeroResult {
+  disparosTotais: number;
+  audiosTotais: number;
+  textosTotais: number;
+  minutosTotaisAudio: number;
+  tokensTotaisTexto: number;
+  pctAudioDerivado: number;      // % derivado para a UI manual mostrar
+  custoInfraTotalBrl: number;
+  explicacao: string;
+}
+
+export function calcEscalaPorNumero(i: EscalaPorNumeroInput): EscalaPorNumeroResult {
+  const q = Math.max(0, i.quantidadeNumeros);
+  const dpn = Math.max(0, i.disparosPorNumero);
+  const apn = Math.min(Math.max(0, i.audiosPorNumero), dpn); // áudios não excedem disparos
+  const disparosTotais = q * dpn;
+  const audiosTotais = q * apn;
+  const textosTotais = Math.max(0, disparosTotais - audiosTotais);
+  const minutosTotaisAudio = (audiosTotais * Math.max(0, i.duracaoMediaSeg)) / 60;
+  const tokensTotaisTexto = textosTotais * Math.max(0, i.tokensPorMsg);
+  const pctAudioDerivado = dpn > 0 ? (apn / dpn) * 100 : 0;
+  const custoInfraTotalBrl = q * Math.max(0, i.custoInfraPorNumero);
+
+  const explicacao =
+    `${q} números × ${dpn} disparos = ${disparosTotais.toLocaleString("pt-BR")} disparos/mês · ` +
+    `${q} × ${apn} áudios = ${audiosTotais.toLocaleString("pt-BR")} áudios ` +
+    `(${pctAudioDerivado.toFixed(0)}%) · ` +
+    `${minutosTotaisAudio.toFixed(1)} min de áudio.`;
+
+  return {
+    disparosTotais,
+    audiosTotais,
+    textosTotais,
+    minutosTotaisAudio,
+    tokensTotaisTexto,
+    pctAudioDerivado,
+    custoInfraTotalBrl,
+    explicacao,
+  };
+}
+
 // ============= GPT =============
 
 export const GPT_PRICES = {
@@ -140,6 +192,8 @@ export interface ElevenResult extends ElevenPlanResult {
   fixoUsd: number;
   // Lista comparativa de TODOS os planos elegíveis para a qualidade escolhida:
   comparativo: ElevenPlanResult[];
+  // Texto explicando POR QUE este plano foi recomendado.
+  motivoRecomendacao: string;
 }
 
 function avaliarPlano(plano: ElevenPlan, minutosMes: number): ElevenPlanResult {
@@ -163,8 +217,10 @@ function avaliarPlano(plano: ElevenPlan, minutosMes: number): ElevenPlanResult {
 }
 
 // Escolhe o plano mais barato dentre os elegíveis para a qualidade selecionada.
-// Estratégia: 1) prefere o plano mais barato que COBRE o volume sem excedente;
-// 2) se nenhum cobre, escolhe o de menor custo total (fixo + excedente).
+// REGRA: 1) Se houver planos que COBREM o volume sem excedente, escolhe o de
+// MENOR PREÇO FIXO entre eles. 2) Caso contrário, escolhe o de MENOR CUSTO
+// TOTAL (fixo + excedente) — nunca recomenda um plano com excedente quando
+// existe outro sem excedente mais barato no total.
 export function calcElevenLabs(
   minutosMes: number,
   qualidade: AudioQuality = "good",
@@ -173,15 +229,30 @@ export function calcElevenLabs(
   const comparativo = elegiveis.map(p => avaliarPlano(p, minutosMes));
 
   const cobrem = comparativo.filter(r => r.cobre);
-  const recomendado =
-    cobrem.length > 0
-      ? cobrem.reduce((a, b) => (a.totalUsd <= b.totalUsd ? a : b))
-      : comparativo.reduce((a, b) => (a.totalUsd <= b.totalUsd ? a : b));
+  let recomendado: ElevenPlanResult;
+  let motivoRecomendacao: string;
+
+  if (cobrem.length > 0) {
+    // Mais barato (preço fixo) entre os que cobrem sem excedente.
+    recomendado = cobrem.reduce((a, b) => (a.precoPlanoUsd <= b.precoPlanoUsd ? a : b));
+    motivoRecomendacao =
+      `Cobre ${minutosMes.toFixed(1)} min com ${recomendado.minutosInclusos} min inclusos ` +
+      `pelo menor preço fixo entre os planos compatíveis ($${recomendado.precoPlanoUsd}/mês).`;
+  } else {
+    // Nenhum cobre — escolhe menor custo total (fixo + excedente).
+    recomendado = comparativo.reduce((a, b) => (a.totalUsd <= b.totalUsd ? a : b));
+    motivoRecomendacao =
+      `Nenhum plano cobre ${minutosMes.toFixed(1)} min sem excedente. ` +
+      `${recomendado.plano.nome} tem o menor custo total: $${recomendado.precoPlanoUsd} fixo + ` +
+      `$${recomendado.excedenteUsd.toFixed(2)} excedente (${recomendado.excedenteMin.toFixed(1)} min) ` +
+      `= $${recomendado.totalUsd.toFixed(2)}/mês.`;
+  }
 
   return {
     ...recomendado,
     fixoUsd: recomendado.plano.fixoUsd,
     comparativo,
+    motivoRecomendacao,
   };
 }
 
