@@ -264,12 +264,13 @@ export function Calculator() {
       numerosInicial: rampNumerosIni,
       numerosFinal: quantidadeNumeros,
       moPlanoId,
+      moPrecoOverride: moCustomAtivo ? moPrecoCustom : undefined,
       cambio,
       setup,
     });
   }, [rampAtivo, rampMeses, rampDisparosIni, rampPctAudioIni, rampNumerosIni,
       disparosEfetivos, pctAudioEfetivo, duracaoSeg, tokensPorMsg, modeloGpt,
-      ferramentaAudio, quantidadeNumeros, moPlanoId, cambio, setup]);
+      ferramentaAudio, quantidadeNumeros, moPlanoId, moCustomAtivo, moPrecoCustom, cambio, setup]);
 
   // ===== Gráfico de barras =====
   const chartData = useMemo(() => {
