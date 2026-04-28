@@ -34,6 +34,83 @@ export const ELEVEN_PLANS: ElevenPlan[] = [
   { id: "business", nome: "Business", fixoUsd: 1320, minutosInclusos: 11000,  taxaExcedenteUsd: ELEVEN_OVERAGE_USD_PER_MIN, qualidadeLabel: "Enterprise · SLA",               qualidades: ["studio"] },
 ];
 
+// ============= MÃO DE OBRA por número de WhatsApp =============
+// Subimos mão de obra por número porque R$ 100/numero é subprecificado
+// para operação de campanha política com automação, GPT e áudio ElevenLabs.
+// O valor inclui: setup, ajustes de fluxo, monitoramento diário,
+// suporte durante a campanha e otimização de prompts/voz.
+export const MO_PRECO_MINIMO_POR_NUMERO = 150;
+export const MO_PRECO_LEGADO_POR_NUMERO = 100; // referência histórica para comparativo
+
+export type MoPlanoId = "basico" | "padrao" | "premium";
+
+export interface MoPlano {
+  id: MoPlanoId;
+  nome: string;
+  rotulo: string;          // texto para botão/seletor
+  precoPorNumero: number;
+  descricao: string;
+  inclui: string[];
+}
+
+export const MO_PLANOS: Record<MoPlanoId, MoPlano> = {
+  basico: {
+    id: "basico",
+    nome: "Básico",
+    rotulo: "Básico (mínimo viável)",
+    precoPorNumero: 150,
+    descricao: "Operação enxuta",
+    inclui: ["Setup inicial", "Monitoramento básico", "Suporte horário comercial"],
+  },
+  padrao: {
+    id: "padrao",
+    nome: "Padrão",
+    rotulo: "Padrão (recomendado)",
+    precoPorNumero: 220,
+    descricao: "Acompanhamento ativo",
+    inclui: [
+      "Setup completo",
+      "Ajustes semanais de fluxo",
+      "Monitoramento diário",
+      "Suporte estendido",
+      "Otimização de prompts",
+    ],
+  },
+  premium: {
+    id: "premium",
+    nome: "Premium",
+    rotulo: "Premium (máximo acompanhamento)",
+    precoPorNumero: 320,
+    descricao: "Operação assistida",
+    inclui: [
+      "Setup premium",
+      "Ajustes contínuos de fluxo",
+      "Monitoramento em tempo real",
+      "Suporte 24h durante a campanha",
+      "A/B de áudios e textos",
+      "Gerente de conta dedicado",
+    ],
+  },
+};
+
+export function calcularMaoDeObraPorNumero(
+  quantidadeNumeros: number,
+  plano: MoPlanoId,
+): number {
+  const preco = Math.max(MO_PLANOS[plano].precoPorNumero, MO_PRECO_MINIMO_POR_NUMERO);
+  return Math.max(0, quantidadeNumeros) * preco;
+}
+
+export function calcularPercentualMaoDeObra(
+  custoTecnico: number,
+  maoDeObra: number,
+): number {
+  const total = custoTecnico + maoDeObra;
+  return total > 0 ? (maoDeObra / total) * 100 : 0;
+}
+
+// ============= GPT =============
+
 export const GPT_PRICES = {
   "gpt4o-mini": { input: 0.15, output: 0.60, label: "GPT-4o mini" },
   "gpt4o":      { input: 2.50, output: 10.00, label: "GPT-4o" },
@@ -210,8 +287,7 @@ export function calcAnual(custoMes: number, precoVendaMes: number, setup: number
 }
 
 // ============= RAMP-UP / Crescimento gradual =============
-// Projeção mês a mês com aumento progressivo de volume. A mão de obra cresce
-// proporcionalmente ao volume (com teto = 100% do moBase).
+// Projeção mês a mês com aumento progressivo de volume e de números ativos.
 
 export interface RampInput {
   meses: number;
@@ -223,9 +299,10 @@ export interface RampInput {
   tokensPorMsg: number;
   modeloGpt: GptModel;
   ferramenta: "elevenlabs" | "playht" | "polly";
-  moBase: number;
-  pctMoInicial: number; // % da MO base no mês 1
-  pctMoFinal: number;   // % da MO base no mês final (proporcional ao volume)
+  // Mão de obra por número (ramp-up de números ativos com plano fixo)
+  numerosInicial: number;
+  numerosFinal: number;
+  moPlanoId: MoPlanoId;
   cambio: number;
   setup: number;
   margem?: number;
@@ -235,7 +312,7 @@ export interface RampMes {
   mes: number;
   disparos: number;
   pctAudio: number;
-  pctMo: number;
+  numeros: number;
   audiosMes: number;
   minutosMes: number;
   custoAudioBrl: number;
@@ -266,7 +343,7 @@ export function calcRampUp(input: RampInput): RampMes[] {
     const t = input.meses === 1 ? 1 : (i - 1) / (input.meses - 1);
     const disparos = Math.round(lerp(input.disparosInicial, input.disparosFinal, t));
     const pctAudio = lerp(input.pctAudioInicial, input.pctAudioFinal, t);
-    const pctMo = lerp(input.pctMoInicial, input.pctMoFinal, t);
+    const numeros = Math.max(1, Math.round(lerp(input.numerosInicial, input.numerosFinal, t)));
 
     const { audiosMes, minutosMes } = calcMinutos(disparos, pctAudio, input.duracaoSeg);
     const eleven = calcElevenLabs(minutosMes);
@@ -282,7 +359,7 @@ export function calcRampUp(input: RampInput): RampMes[] {
     const custoAudioBrl = audioUsd * input.cambio;
     const custoTextoBrl = gpt.totalUsd * input.cambio;
     const custoApiBrl = custoAudioBrl + custoTextoBrl;
-    const custoMoBrl = input.moBase * (pctMo / 100);
+    const custoMoBrl = calcularMaoDeObraPorNumero(numeros, input.moPlanoId);
     const custoTotal = custoApiBrl + custoMoBrl;
     const venda = calcVenda(custoTotal, input.setup, margem);
 
@@ -298,7 +375,7 @@ export function calcRampUp(input: RampInput): RampMes[] {
       mes: i,
       disparos,
       pctAudio,
-      pctMo,
+      numeros,
       audiosMes,
       minutosMes,
       custoAudioBrl,

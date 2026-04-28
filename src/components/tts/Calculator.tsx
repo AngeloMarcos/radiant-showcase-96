@@ -3,7 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import {
   calcMinutos, calcElevenLabs, calcPlayht, calcPolly, calcGpt, calcVenda,
   calcPlanos, calcAnual, calcRampUp, GPT_PRICES, fmtBRL, fmtUSD, fmtNum,
-  type GptModel, type RampMes, type AudioQuality,
+  calcularMaoDeObraPorNumero, calcularPercentualMaoDeObra,
+  MO_PLANOS, MO_PRECO_LEGADO_POR_NUMERO,
+  type GptModel, type RampMes, type AudioQuality, type MoPlanoId,
 } from "./lib/calc";
 import { SliderInput } from "./ui/SliderInput";
 import { StatCard } from "./ui/StatCard";
@@ -50,8 +52,8 @@ interface SimulacaoSalva {
   duracaoSeg: number;
   ferramenta: string;
   modeloGpt: string;
-  moBase: number;
-  pctMo: number;
+  quantidadeNumeros: number;
+  moPlanoId: MoPlanoId;
   cambio: number;
   setup: number;
   custoTotal: number;
@@ -79,8 +81,8 @@ export function Calculator() {
   const [totalDisparos, setTotalDisparos] = useState(5000);
   const [pctAudio, setPctAudio] = useState(30);
   const [duracaoSeg, setDuracaoSeg] = useState(10);
-  const [moBase, setMoBase] = useState(2500);
-  const [pctMo, setPctMo] = useState(40);
+  const [quantidadeNumeros, setQuantidadeNumeros] = useState(30);
+  const [moPlanoId, setMoPlanoId] = useState<MoPlanoId>("padrao");
   const [cambio, setCambio] = useState(5.80);
   const [setup, setSetup] = useState(4500);
   const [ferramentaAudio, setFerramentaAudio] = useState<AudioTool>("elevenlabs");
@@ -128,13 +130,20 @@ export function Calculator() {
     const custoInfraBrl = 0; // n8n self-hosted
     const custoTecnicoBrl = custoApiBrl + custoInfraBrl;
 
-    // Mão de obra: base fixa + percentual sobre custos técnicos
-    const moPercentual = custoTecnicoBrl * (pctMo / 100);
-    const custoMoBrl = moBase + moPercentual;
+    // Mão de obra: por número de WhatsApp ativo, conforme plano selecionado
+    const custoMoBrl = calcularMaoDeObraPorNumero(quantidadeNumeros, moPlanoId);
+    const custoMoLegadoBrl = quantidadeNumeros * MO_PRECO_LEGADO_POR_NUMERO;
+    const moPorPlano: Record<MoPlanoId, number> = {
+      basico:  calcularMaoDeObraPorNumero(quantidadeNumeros, "basico"),
+      padrao:  calcularMaoDeObraPorNumero(quantidadeNumeros, "padrao"),
+      premium: calcularMaoDeObraPorNumero(quantidadeNumeros, "premium"),
+    };
+    const pctMoNoTotal = calcularPercentualMaoDeObra(custoTecnicoBrl, custoMoBrl);
 
     const custoTotalMes = custoTecnicoBrl + custoMoBrl;
     const custoPrimeiroMes = custoTotalMes + setup;
     const venda = calcVenda(custoTotalMes, setup, 0.40);
+    const custoPorNumero = quantidadeNumeros > 0 ? custoTotalMes / quantidadeNumeros : 0;
 
     return {
       audiosMes, minutosMes,
@@ -142,11 +151,11 @@ export function Calculator() {
       audioUsd, audioLabel,
       custoAudioBrl, custoTextoBrl, custoInfraBrl, custoTecnicoBrl,
       custoApiUsd, custoApiBrl,
-      moPercentual, custoMoBrl,
+      custoMoBrl, custoMoLegadoBrl, moPorPlano, pctMoNoTotal, custoPorNumero,
       custoTotalMes, custoPrimeiroMes,
       ...venda,
     };
-  }, [totalDisparos, pctAudio, duracaoSeg, moBase, pctMo, cambio, setup, ferramentaAudio, qualidade, modeloGpt, tokensPorMsg]);
+  }, [totalDisparos, pctAudio, duracaoSeg, quantidadeNumeros, moPlanoId, cambio, setup, ferramentaAudio, qualidade, modeloGpt, tokensPorMsg]);
 
   const planos = useMemo(() => calcPlanos(calc.precoVenda, setup), [calc.precoVenda, setup]);
   const anual = useMemo(() => calcAnual(calc.custoTotalMes, calc.precoVenda, setup), [calc.custoTotalMes, calc.precoVenda, setup]);
@@ -156,7 +165,7 @@ export function Calculator() {
   const [rampMeses, setRampMeses] = useState(6);
   const [rampDisparosIni, setRampDisparosIni] = useState(1500);
   const [rampPctAudioIni, setRampPctAudioIni] = useState(10);
-  const [rampPctMoIni, setRampPctMoIni] = useState(15);
+  const [rampNumerosIni, setRampNumerosIni] = useState(5);
 
   const rampData = useMemo<RampMes[]>(() => {
     if (!rampAtivo) return [];
@@ -170,15 +179,15 @@ export function Calculator() {
       tokensPorMsg,
       modeloGpt,
       ferramenta: ferramentaAudio === "comparar" ? "elevenlabs" : ferramentaAudio,
-      moBase,
-      pctMoInicial: rampPctMoIni,
-      pctMoFinal: pctMo,
+      numerosInicial: rampNumerosIni,
+      numerosFinal: quantidadeNumeros,
+      moPlanoId,
       cambio,
       setup,
     });
-  }, [rampAtivo, rampMeses, rampDisparosIni, rampPctAudioIni, rampPctMoIni,
+  }, [rampAtivo, rampMeses, rampDisparosIni, rampPctAudioIni, rampNumerosIni,
       totalDisparos, pctAudio, duracaoSeg, tokensPorMsg, modeloGpt,
-      ferramentaAudio, moBase, pctMo, cambio, setup]);
+      ferramentaAudio, quantidadeNumeros, moPlanoId, cambio, setup]);
 
   // ===== Gráfico de barras =====
   const chartData = useMemo(() => {
@@ -227,7 +236,6 @@ export function Calculator() {
 
   function aplicarCenario(c: Cenario) {
     setPctAudio(c.pctAudio);
-    setPctMo(c.pctMo);
   }
 
   // ===== Texto da proposta (compartilhado entre WhatsApp e PDF) =====
@@ -328,8 +336,8 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
       duracaoSeg,
       ferramenta: ferramentaAudio,
       modeloGpt,
-      moBase,
-      pctMo,
+      quantidadeNumeros,
+      moPlanoId,
       cambio,
       setup,
       custoTotal: calc.custoTotalMes,
@@ -350,8 +358,8 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
     setDuracaoSeg(s.duracaoSeg);
     setFerramentaAudio(s.ferramenta as AudioTool);
     setModeloGpt(s.modeloGpt as GptModel);
-    setMoBase(s.moBase);
-    setPctMo(s.pctMo);
+    setQuantidadeNumeros(s.quantidadeNumeros ?? 30);
+    setMoPlanoId(s.moPlanoId ?? "padrao");
     setCambio(s.cambio);
     setSetup(s.setup);
   }
@@ -363,7 +371,8 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
 
   function resetar() {
     setTotalDisparos(5000); setPctAudio(30); setDuracaoSeg(10);
-    setMoBase(2500); setPctMo(40); setCambio(5.80); setSetup(4500);
+    setQuantidadeNumeros(30); setMoPlanoId("padrao");
+    setCambio(5.80); setSetup(4500);
     setFerramentaAudio("elevenlabs"); setModeloGpt("gpt4o-mini");
     setTokensPorMsg(200); setNomeCliente("");
   }
@@ -375,12 +384,12 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
     }
   }
 
+  const moPlanoSel = MO_PLANOS[moPlanoId];
   const breakdown = [
     { item: `${calc.audioLabel} · áudio`, usd: calc.audioUsd, brl: calc.audioUsd * cambio },
     { item: `${GPT_PRICES[modeloGpt].label} · texto`, usd: calc.gpt.totalUsd, brl: calc.custoTextoBrl },
     { item: "n8n (self-hosted)", usd: 0, brl: 0 },
-    { item: `Mão de obra base (fixa)`, usd: null as number | null, brl: moBase },
-    { item: `MO % sobre técnico (${pctMo}%)`, usd: null as number | null, brl: calc.moPercentual },
+    { item: `Mão de obra · ${moPlanoSel.nome} (${quantidadeNumeros} números × ${fmtBRL(moPlanoSel.precoPorNumero)})`, usd: null as number | null, brl: calc.custoMoBrl },
   ];
   const subtotalApiBrl = calc.custoApiBrl;
   const textosMes = totalDisparos * (1 - pctAudio / 100);
@@ -497,8 +506,13 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
               />
               <SliderInput label="Duração / áudio"    value={duracaoSeg}    onChange={setDuracaoSeg}    min={5} max={120} suffix="s" />
               <SliderInput label="Tokens / msg texto" value={tokensPorMsg}  onChange={setTokensPorMsg}  min={50} max={2000} step={10} />
-              <SliderInput label="MO base (fixa BRL)"  value={moBase}        onChange={setMoBase}        min={0} max={20000} step={100} suffix="R$" hint="valor fixo somado todo mês" />
-              <SliderInput label="% MO sobre técnico"   value={pctMo}         onChange={setPctMo}         min={0} max={100} suffix="%" hint={`+ ${fmtBRL(calc.moPercentual)} (sobre custos técnicos)`} />
+              <SliderInput
+                label="Números WhatsApp ativos"
+                value={quantidadeNumeros}
+                onChange={setQuantidadeNumeros}
+                min={1} max={200} step={1}
+                hint={`MO ${moPlanoSel.nome}: ${fmtBRL(calc.custoMoBrl)}/mês (${calc.pctMoNoTotal.toFixed(1)}% do total)`}
+              />
               <NumberField label="Câmbio USD → BRL" value={cambio} onChange={setCambio} step={0.05} prefix="R$" />
               <NumberField label="Setup (one-time)" value={setup}  onChange={setSetup}  step={100} prefix="R$" />
             </div>
@@ -610,7 +624,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
           <SectionTitle icon={<TrendingUp className="size-4" />} title="Resultados" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard label="Custo API / mês" value={fmtBRL(calc.custoApiBrl)} sub={fmtUSD(calc.custoApiUsd)} accent="cyan" />
-            <StatCard label="Mão de obra / mês" value={fmtBRL(calc.custoMoBrl)} sub={`${pctMo}% de ${fmtBRL(moBase)}`} />
+            <StatCard label="Mão de obra / mês" value={fmtBRL(calc.custoMoBrl)} sub={`${quantidadeNumeros} nº × ${fmtBRL(moPlanoSel.precoPorNumero)} (${moPlanoSel.nome})`} />
             <StatCard label="Custo total / mês" value={fmtBRL(calc.custoTotalMes)} accent="orange" large />
             <StatCard label="Custo / disparo" value={totalDisparos > 0 ? fmtBRL(calc.custoTotalMes / totalDisparos) : "R$ 0,00"} sub="custo total ÷ disparos" accent="cyan" />
             <StatCard label="1º mês (com setup)" value={fmtBRL(calc.custoPrimeiroMes)} sub={`+ ${fmtBRL(setup)} setup`} accent="gold" />
@@ -647,11 +661,18 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                 </p>
 
                 <div className="mt-4 space-y-1.5 text-xs font-mono">
-                  <Row k="Plano base"          v={`${fmtUSD(calc.eleven.plano.fixoUsd)}/mês`} />
-                  <Row k="Minutos inclusos"    v={`${fmtNum(calc.eleven.minutosInclusos)} min`} />
-                  <Row k="Minutos necessários" v={`${fmtNum(calc.eleven.minutosNecessarios, 1)} min`} />
-                  <Row k="Excedente"           v={`${fmtNum(calc.eleven.excedenteMin, 1)} min`} />
-                  <Row k="Custo excedente"     v={fmtUSD(calc.eleven.excedenteUsd)} />
+                  {([
+                    ["Plano base",          `${fmtUSD(calc.eleven.plano.fixoUsd)}/mês`],
+                    ["Minutos inclusos",    `${fmtNum(calc.eleven.minutosInclusos)} min`],
+                    ["Minutos necessários", `${fmtNum(calc.eleven.minutosNecessarios, 1)} min`],
+                    ["Excedente",           `${fmtNum(calc.eleven.excedenteMin, 1)} min`],
+                    ["Custo excedente",     fmtUSD(calc.eleven.excedenteUsd)],
+                  ] as [string, string][]).map(([k, v]) => (
+                    <div key={k} className="flex justify-between text-[var(--tts-muted)]">
+                      <span>{k}</span>
+                      <span className="text-[var(--tts-text)]">{v}</span>
+                    </div>
+                  ))}
                   <div className="border-t border-[var(--tts-border)] pt-1.5 mt-1.5 flex justify-between font-bold">
                     <span>Total ElevenLabs</span>
                     <span style={{ color: "var(--tts-orange)" }}>{fmtUSD(calc.eleven.totalUsd)}/mês</span>
@@ -713,6 +734,129 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
             </div>
           </section>
         )}
+
+        {/* Mão de Obra — seleção de plano e comparativo vs R$ 100/número */}
+        <section>
+          <SectionTitle
+            icon={<Wrench className="size-4" />}
+            title="Mão de Obra (por número de WhatsApp)"
+            hint={`${quantidadeNumeros} números ativos`}
+          />
+          <p className="text-xs text-[var(--tts-muted)] font-mono mb-4">
+            Inclui setup, ajustes de fluxo, monitoramento, suporte durante a campanha e otimização contínua.
+          </p>
+
+          {/* Cards dos planos */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            {(Object.values(MO_PLANOS)).map(p => {
+              const total = calc.moPorPlano[p.id];
+              const isSel = p.id === moPlanoId;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setMoPlanoId(p.id)}
+                  className={`tts-card p-5 text-left transition-all hover:-translate-y-0.5 ${
+                    isSel ? "!border-[var(--tts-orange)]" : ""
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-display font-bold">{p.rotulo}</h3>
+                    {isSel && <span className="tts-badge tts-badge-orange">Selecionado</span>}
+                  </div>
+                  <div className="font-mono text-2xl font-bold" style={{ color: isSel ? "var(--tts-orange)" : "var(--tts-text)" }}>
+                    {fmtBRL(p.precoPorNumero)}
+                    <span className="text-[10px] text-[var(--tts-muted)] font-normal">/número</span>
+                  </div>
+                  <p className="text-[11px] text-[var(--tts-muted)] font-mono mb-3">
+                    Total p/ {quantidadeNumeros} nº: <span className="text-[var(--tts-text)] font-bold">{fmtBRL(total)}</span>/mês
+                  </p>
+                  <ul className="text-xs space-y-1">
+                    {p.inclui.map(f => (
+                      <li key={f} className="flex items-start gap-1.5">
+                        <Check className="size-3 text-[var(--tts-green)] mt-0.5 shrink-0" />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Comparativo: legado vs novo */}
+          {(() => {
+            const legado = calc.custoMoLegadoBrl;
+            const novo = calc.custoMoBrl;
+            const diff = novo - legado;
+            const diffPct = legado > 0 ? (diff / legado) * 100 : 0;
+            return (
+              <div className="tts-card p-5 !border-[var(--tts-orange)]">
+                <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-3">
+                  Comparativo · cobrança atual vs nova precificação
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm font-mono">
+                  <div>
+                    <p className="text-[10px] text-[var(--tts-muted)] uppercase">Cobrando R$ 100/número (atual)</p>
+                    <p className="text-xl font-bold">{fmtBRL(legado)}/mês</p>
+                    <p className="text-[10px] text-[var(--tts-muted)]">{quantidadeNumeros} × R$ 100</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-[var(--tts-muted)] uppercase">Plano {moPlanoSel.nome} (novo)</p>
+                    <p className="text-xl font-bold" style={{ color: "var(--tts-orange)" }}>{fmtBRL(novo)}/mês</p>
+                    <p className="text-[10px] text-[var(--tts-muted)]">{quantidadeNumeros} × {fmtBRL(moPlanoSel.precoPorNumero)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-[var(--tts-muted)] uppercase">Diferença</p>
+                    <p className="text-xl font-bold" style={{ color: diff >= 0 ? "var(--tts-green)" : "var(--tts-red)" }}>
+                      {diff >= 0 ? "+" : ""}{fmtBRL(diff)}
+                    </p>
+                    <p className="text-[10px] text-[var(--tts-muted)]">
+                      {diff >= 0 ? "+" : ""}{diffPct.toFixed(1)}% · subprecificação corrigida
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-[var(--tts-border)] text-xs font-mono">
+                  <div className="flex justify-between"><span className="text-[var(--tts-muted)]">MO no custo total</span><span className="font-bold">{calc.pctMoNoTotal.toFixed(1)}%</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--tts-muted)]">Custo / número</span><span className="font-bold">{fmtBRL(calc.custoPorNumero)}</span></div>
+                  <div className="flex justify-between"><span className="text-[var(--tts-muted)]">Custo total / mês</span><span className="font-bold" style={{ color: "var(--tts-orange)" }}>{fmtBRL(calc.custoTotalMes)}</span></div>
+                </div>
+
+                {/* Tabela rápida dos 3 planos */}
+                <div className="overflow-x-auto mt-4">
+                  <table className="w-full text-xs font-mono">
+                    <thead>
+                      <tr className="text-[10px] uppercase text-[var(--tts-muted)] border-b border-[var(--tts-border)]">
+                        <th className="text-left p-2">Plano</th>
+                        <th className="text-right p-2">R$ / número</th>
+                        <th className="text-right p-2">Total MO/mês</th>
+                        <th className="text-right p-2">% do custo total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(Object.values(MO_PLANOS)).map(p => {
+                        const total = calc.moPorPlano[p.id];
+                        const pct = calcularPercentualMaoDeObra(calc.custoTecnicoBrl, total);
+                        const isSel = p.id === moPlanoId;
+                        return (
+                          <tr key={p.id} className={`border-b border-[var(--tts-border)]/60 ${isSel ? "bg-[var(--tts-surface-2)]" : ""}`}>
+                            <td className="p-2">
+                              <span className={isSel ? "font-bold text-[var(--tts-orange)]" : ""}>{p.nome}</span>
+                              {isSel && <span className="ml-1 text-[9px]">★</span>}
+                            </td>
+                            <td className="p-2 text-right">{fmtBRL(p.precoPorNumero)}</td>
+                            <td className="p-2 text-right font-bold">{fmtBRL(total)}</td>
+                            <td className="p-2 text-right">{pct.toFixed(1)}%</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
+        </section>
 
         {/* Breakdown */}
         <section>
@@ -983,11 +1127,11 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                   hint={`Meta: ${pctAudio}%`}
                 />
                 <SliderInput
-                  label="% MO no mês 1"
-                  value={rampPctMoIni}
-                  onChange={setRampPctMoIni}
-                  min={0} max={100} suffix="%"
-                  hint={`Meta: ${pctMo}% · = ${fmtBRL(moBase * rampPctMoIni / 100)}`}
+                  label="Números no mês 1"
+                  value={rampNumerosIni}
+                  onChange={setRampNumerosIni}
+                  min={1} max={Math.max(quantidadeNumeros, 1)} step={1}
+                  hint={`Meta: ${quantidadeNumeros} números (plano ${moPlanoSel.nome})`}
                 />
               </div>
 
@@ -1003,7 +1147,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                       setRampMeses(n);
                       setRampDisparosIni(Math.max(500, Math.round(totalDisparos / n / 500) * 500));
                       setRampPctAudioIni(Math.round(pctAudio / n));
-                      setRampPctMoIni(Math.round(pctMo / n));
+                      setRampNumerosIni(Math.max(1, Math.round(quantidadeNumeros / n)));
                     }}
                     className="tts-btn !text-xs !py-1 !px-3"
                     title={`Começa com 1/${n} do volume final e cresce em ${n} meses`}
@@ -1015,7 +1159,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                   onClick={() => {
                     setRampDisparosIni(totalDisparos);
                     setRampPctAudioIni(pctAudio);
-                    setRampPctMoIni(pctMo);
+                    setRampNumerosIni(quantidadeNumeros);
                   }}
                   className="tts-btn !text-xs !py-1 !px-3"
                   title="Inicia já no volume final (sem ramp)"
@@ -1093,7 +1237,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                             mes: m.mes,
                             audios: Math.round(m.audiosMes),
                             textos: Math.round(m.disparos - m.audiosMes),
-                            moPct: Math.round(m.pctMo),
+                            numeros: m.numeros,
                           }))}
                           margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                         >
@@ -1109,7 +1253,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                             contentStyle={{ background: "#0d1119", border: "1px solid #1a2235", borderRadius: 8, fontSize: 12, color: "#d8e4f5" }}
                             labelFormatter={(l) => `Mês ${l}`}
                             formatter={(v, name) =>
-                              name === "MO (% base)" ? `${v}%` : fmtNum(Number(v))
+                              name === "Números ativos" ? `${v} nº` : fmtNum(Number(v))
                             }
                           />
                           <Legend wrapperStyle={{ fontSize: 12 }} />
@@ -1117,8 +1261,8 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                             strokeWidth={2} dot={{ r: 3 }} name="Áudios/mês" />
                           <Line yAxisId="left" type="monotone" dataKey="textos" stroke={CHART_COLORS.cyan}
                             strokeWidth={2} dot={{ r: 3 }} name="Textos/mês" />
-                          <Line yAxisId="right" type="monotone" dataKey="moPct" stroke={CHART_COLORS.orange}
-                            strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} name="MO (% base)" />
+                          <Line yAxisId="right" type="monotone" dataKey="numeros" stroke={CHART_COLORS.orange}
+                            strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} name="Números ativos" />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
@@ -1131,7 +1275,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                           <th className="text-left p-3">Mês</th>
                           <th className="text-right p-3">Disparos</th>
                           <th className="text-right p-3">% Áudio</th>
-                          <th className="text-right p-3">MO</th>
+                          <th className="text-right p-3">Números</th>
                           <th className="text-right p-3">Custo</th>
                           <th className="text-right p-3">Venda</th>
                           <th className="text-right p-3">Lucro</th>
@@ -1148,7 +1292,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
                             </td>
                             <td className="p-3 text-right">{fmtNum(m.disparos)}</td>
                             <td className="p-3 text-right">{m.pctAudio.toFixed(0)}%</td>
-                            <td className="p-3 text-right">{fmtBRL(m.custoMoBrl)} <span className="text-[var(--tts-muted)]">({m.pctMo.toFixed(0)}%)</span></td>
+                            <td className="p-3 text-right">{m.numeros} <span className="text-[var(--tts-muted)]">({fmtBRL(m.custoMoBrl)})</span></td>
                             <td className="p-3 text-right">{fmtBRL(m.custoTotal)}</td>
                             <td className="p-3 text-right">{fmtBRL(m.precoVenda)}</td>
                             <td className="p-3 text-right" style={{ color: "var(--tts-green)" }}>{fmtBRL(m.lucro)}</td>
@@ -1204,15 +1348,6 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
           TTS Cost Calculator · MentoArk · cálculo client-side · valores referenciais sujeitos a alteração de preços nas APIs
         </footer>
       </div>
-    </div>
-  );
-}
-
-function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="flex justify-between text-[var(--tts-muted)]">
-      <span>{k}</span>
-      <span className="text-[var(--tts-text)]">{v}</span>
     </div>
   );
 }
