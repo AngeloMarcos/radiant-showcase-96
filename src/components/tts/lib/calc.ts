@@ -1,20 +1,37 @@
 // Engine de cálculo da TTS Cost Calculator. Funções puras.
+//
+// === Planos ElevenLabs (valores aproximados, USD/mês) ===
+// - Starter:  $5   · ~30k credits  · ~60 min de áudio   · 128 kbps (uso casual)
+// - Creator:  $22  · ~100k credits · ~200 min de áudio  · 192 kbps + voice cloning
+// - Pro:      $99  · ~500k credits · ~1.000 min         · 44.1kHz PCM via API
+// - Scale:    $330 · ~2M credits   · ~4.000 min         · alto volume / produção
+// - Business: $1320 · ~11M credits · ~11.000+ min       · enterprise
+// Conversão usada: ~500 credits por minuto de áudio (multilingual v2).
+// Excedente cobrado a uma taxa base por minuto (ajustável).
 
-export type ElevenPlanId = "creator" | "pro" | "scale" | "business";
+export type ElevenPlanId = "starter" | "creator" | "pro" | "scale" | "business";
+export type AudioQuality = "good" | "professional" | "studio";
 
 export interface ElevenPlan {
   id: ElevenPlanId;
   nome: string;
   fixoUsd: number;
   minutosInclusos: number;
-  taxaExcedenteUsd: number; // por minuto
+  taxaExcedenteUsd: number;     // USD por minuto excedente
+  qualidadeLabel: string;       // descrição amigável (kbps / formato)
+  qualidades: AudioQuality[];   // níveis de qualidade que este plano atende
 }
 
+// Taxa base de excedente por minuto (estimada). Pode ser ajustada conforme
+// o consumo real de credits da sua conta.
+export const ELEVEN_OVERAGE_USD_PER_MIN = 0.20;
+
 export const ELEVEN_PLANS: ElevenPlan[] = [
-  { id: "creator",  nome: "Creator",  fixoUsd: 22,   minutosInclusos: 100,    taxaExcedenteUsd: 0.18 },
-  { id: "pro",      nome: "Pro",      fixoUsd: 99,   minutosInclusos: 600,    taxaExcedenteUsd: 0.18 },
-  { id: "scale",    nome: "Scale",    fixoUsd: 330,  minutosInclusos: 1800,   taxaExcedenteUsd: 0.17 },
-  { id: "business", nome: "Business", fixoUsd: 1320, minutosInclusos: 11000,  taxaExcedenteUsd: 0.12 },
+  { id: "starter",  nome: "Starter",  fixoUsd: 5,    minutosInclusos: 60,     taxaExcedenteUsd: ELEVEN_OVERAGE_USD_PER_MIN, qualidadeLabel: "128 kbps · uso casual",         qualidades: ["good"] },
+  { id: "creator",  nome: "Creator",  fixoUsd: 22,   minutosInclusos: 200,    taxaExcedenteUsd: ELEVEN_OVERAGE_USD_PER_MIN, qualidadeLabel: "192 kbps · pro voice cloning",  qualidades: ["good", "professional"] },
+  { id: "pro",      nome: "Pro",      fixoUsd: 99,   minutosInclusos: 1000,   taxaExcedenteUsd: ELEVEN_OVERAGE_USD_PER_MIN, qualidadeLabel: "44.1kHz PCM via API",            qualidades: ["professional", "studio"] },
+  { id: "scale",    nome: "Scale",    fixoUsd: 330,  minutosInclusos: 4000,   taxaExcedenteUsd: ELEVEN_OVERAGE_USD_PER_MIN, qualidadeLabel: "44.1kHz PCM · alto volume",      qualidades: ["studio"] },
+  { id: "business", nome: "Business", fixoUsd: 1320, minutosInclusos: 11000,  taxaExcedenteUsd: ELEVEN_OVERAGE_USD_PER_MIN, qualidadeLabel: "Enterprise · SLA",               qualidades: ["studio"] },
 ];
 
 export const GPT_PRICES = {
