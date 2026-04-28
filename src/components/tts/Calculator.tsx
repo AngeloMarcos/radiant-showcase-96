@@ -93,6 +93,12 @@ export function Calculator() {
   const [mostrarAnual, setMostrarAnual] = useState(false);
   const [copiado, setCopiado] = useState(false);
 
+  // ===== Modo de escala (proporcional por número) =====
+  const [modoEscala, setModoEscala] = useState<"manual" | "porNumero">("manual");
+  const [disparosPorNumero, setDisparosPorNumero] = useState(500);
+  const [audiosPorNumero, setAudiosPorNumero] = useState(150);
+  const [custoInfraPorNumero, setCustoInfraPorNumero] = useState(0);
+
   // ===== Histórico =====
   const [historico, setHistorico] = useState<SimulacaoSalva[]>([]);
   useEffect(() => {
