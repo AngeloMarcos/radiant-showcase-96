@@ -1142,10 +1142,39 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
           </div>
         </section>
 
-        {/* Proposta */}
+        {/* Por que vale a pena (área comercial) */}
+        <section>
+          <SectionTitle icon={<Sparkles className="size-4" />} title="Por que vale a pena" hint="Resumo de valor para o cliente" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[
+              { t: "Operação 100% automatizada", d: "Áudio + texto disparados sem trabalho manual." },
+              { t: "Padronização total", d: "Mesmo padrão de qualidade em todos os números." },
+              { t: "Escala com múltiplos números", d: `Operamos hoje ${quantidadeNumeros} números em paralelo.` },
+              { t: "Áudio de qualidade superior", d: "ElevenLabs com voice cloning e naturalidade real." },
+              { t: "Suporte de campanha", d: "Equipe acompanha do setup ao fim da operação." },
+              { t: "Previsibilidade de custo", d: "Você sabe exatamente quanto vai pagar todo mês." },
+            ].map(b => (
+              <div key={b.t} className="tts-card p-4">
+                <div className="flex items-start gap-2">
+                  <Check className="size-4 text-[var(--tts-green)] mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-bold">{b.t}</p>
+                    <p className="text-xs text-[var(--tts-muted)] font-mono mt-1">{b.d}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Proposta — 3 planos comerciais com âncora */}
         <section className="tts-print-section">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <SectionTitle icon={<Sparkles className="size-4" />} title={nomeCliente ? `Proposta para ${nomeCliente}` : "Proposta para o cliente"} />
+            <SectionTitle
+              icon={<Sparkles className="size-4" />}
+              title={nomeCliente ? `Proposta para ${nomeCliente}` : "Escolha seu plano"}
+              hint={`${quantidadeNumeros} números · ${fmtNum(disparosEfetivos)} disparos/mês`}
+            />
             <div className="flex gap-2">
               <button onClick={salvarSimulacao} className="tts-btn !text-xs">
                 {salvo ? <><Check className="size-3" /> Salvo!</> : <><Save className="size-3" /> Salvar</>}
@@ -1153,51 +1182,133 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
               <button onClick={exportarPDF} className="tts-btn !text-xs">
                 <Printer className="size-3" /> Exportar PDF
               </button>
-              <button onClick={() => copiarProposta(planoRecomendado)} className="tts-btn !text-xs">
-                {copiado ? <><Check className="size-3" /> Copiado!</> : <><Copy className="size-3" /> Copiar Plano Profissional</>}
+              <button onClick={() => copiarProposta(planoRecomendado)} className="tts-btn-primary !text-xs">
+                {copiado ? <><Check className="size-3" /> Copiado!</> : <><Copy className="size-3" /> Copiar Profissional</>}
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {planos.map(p => (
-              <div
-                key={p.nome}
-                className={`tts-card p-6 flex flex-col ${p.destaque ? "!border-[var(--tts-orange)] relative md:-translate-y-2" : ""}`}
-              >
-                {p.destaque && (
-                  <span className="tts-badge tts-badge-orange absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--tts-bg)]">
-                    Recomendado
+
+          {/* Banner âncora — economia entre Essencial → Profissional */}
+          {(() => {
+            const ess = planos[0];
+            const pro = planos[1];
+            const prem = planos[2];
+            const diffProEss = pro.preco - ess.preco;
+            const featsExtras = pro.features.length - ess.features.length;
+            return (
+              <div className="tts-card p-4 mb-4 !border-[var(--tts-orange)]/60 bg-[var(--tts-surface-2)]">
+                <p className="text-sm">
+                  <span className="font-bold" style={{ color: "var(--tts-orange)" }}>
+                    Por apenas {fmtBRL(diffProEss)}/mês a mais que o Essencial
                   </span>
-                )}
-                <h3 className="font-display text-2xl font-bold mb-1">{p.nome}</h3>
-                {nomeCliente && (
-                  <p className="text-[10px] uppercase tracking-wider text-[var(--tts-muted)] font-mono mb-1">
-                    Para: <span className="text-[var(--tts-text)]">{nomeCliente}</span>
-                  </p>
-                )}
-                <div className="font-mono text-3xl font-bold my-3" style={{ color: p.destaque ? "var(--tts-orange)" : "var(--tts-text)" }}>
-                  {fmtBRL(p.preco)}
-                  <span className="text-xs text-[var(--tts-muted)] font-normal">/mês</span>
-                </div>
-                <p className="text-xs text-[var(--tts-muted)] font-mono mb-4">Setup: {fmtBRL(p.setup)}</p>
-                <ul className="space-y-2 text-sm flex-1">
-                  {p.features.map(f => (
-                    <li key={f} className="flex items-start gap-2">
-                      <Check className="size-4 text-[var(--tts-green)] mt-0.5 shrink-0" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="grid grid-cols-2 gap-2 mt-4">
-                  <button onClick={() => copiarProposta(p)} className="tts-btn !text-xs">
-                    <Copy className="size-3" /> WhatsApp
-                  </button>
-                  <button onClick={() => baixarPropostaPDF(p)} className="tts-btn !text-xs">
-                    <FileDown className="size-3" /> PDF
-                  </button>
-                </div>
+                  <span className="text-[var(--tts-muted)]">, você leva </span>
+                  <span className="font-bold">{Math.max(2, featsExtras)} benefícios extras</span>
+                  <span className="text-[var(--tts-muted)]"> · áudio profissional · ajustes semanais · capacidade até </span>
+                  <span className="font-bold">{fmtNum(pro.capacidadeDisparos)}</span>
+                  <span className="text-[var(--tts-muted)]"> disparos/mês.</span>
+                </p>
+                <p className="text-[11px] text-[var(--tts-muted)] font-mono mt-1">
+                  Premium custa {fmtBRL(prem.preco - pro.preco)} a mais que o Profissional — escolha quem quer SLA enterprise.
+                </p>
               </div>
-            ))}
+            );
+          })()}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+            {planos.map(p => {
+              const accent = p.destaque ? "var(--tts-orange)" : p.id === "premium" ? "var(--tts-cyan)" : "var(--tts-text)";
+              return (
+                <div
+                  key={p.id}
+                  className={`tts-card p-6 flex flex-col relative transition-all ${
+                    p.destaque
+                      ? "!border-[var(--tts-orange)] tts-card-active md:-translate-y-3 md:scale-[1.03] shadow-[0_20px_60px_-20px_rgba(139,92,246,0.5)] z-10"
+                      : "opacity-95 hover:opacity-100"
+                  }`}
+                >
+                  {p.badge && (
+                    <span
+                      className={`tts-badge absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 ${
+                        p.destaque ? "tts-badge-orange" : "tts-badge-cyan"
+                      } bg-[var(--tts-bg)] border border-current`}
+                    >
+                      ★ {p.badge}
+                    </span>
+                  )}
+                  <div className="flex items-baseline justify-between">
+                    <h3 className="font-display text-2xl font-bold">{p.nome}</h3>
+                    <span className="text-[10px] uppercase font-mono text-[var(--tts-muted)]">{p.prioridade}</span>
+                  </div>
+                  <p className="text-xs text-[var(--tts-muted)] font-mono mb-3">{p.subtitulo}</p>
+
+                  <div className="font-mono text-4xl font-bold mb-1" style={{ color: accent }}>
+                    {fmtBRL(p.preco)}
+                    <span className="text-xs text-[var(--tts-muted)] font-normal">/mês</span>
+                  </div>
+                  <p className="text-[11px] text-[var(--tts-muted)] font-mono mb-3">
+                    Setup único: <span className="text-[var(--tts-text)] font-bold">{fmtBRL(p.setup)}</span>
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-2 mb-3 text-[10px] font-mono">
+                    <div className="p-2 rounded bg-[var(--tts-surface-2)]">
+                      <p className="text-[var(--tts-muted)] uppercase tracking-wider mb-0.5">Capacidade</p>
+                      <p className="font-bold text-[var(--tts-text)]">{fmtNum(p.capacidadeDisparos)} disparos/mês</p>
+                    </div>
+                    <div className="p-2 rounded bg-[var(--tts-surface-2)]">
+                      <p className="text-[var(--tts-muted)] uppercase tracking-wider mb-0.5">Margem</p>
+                      <p className="font-bold" style={{ color: "var(--tts-green)" }}>
+                        {(p.margemReal * 100).toFixed(0)}%
+                      </p>
+                    </div>
+                    <div className="p-2 rounded bg-[var(--tts-surface-2)] col-span-2">
+                      <p className="text-[var(--tts-muted)] uppercase tracking-wider mb-0.5">SLA</p>
+                      <p className="font-bold text-[var(--tts-text)]">{p.sla}</p>
+                    </div>
+                  </div>
+
+                  <ul className="space-y-1.5 text-sm flex-1 mb-4">
+                    {p.features.map(f => (
+                      <li key={f} className="flex items-start gap-2">
+                        <Check className="size-4 mt-0.5 shrink-0" style={{ color: accent }} />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <p className="text-[10px] text-[var(--tts-muted)] font-mono mb-3 italic">
+                    Ideal para: {p.recomendadoPara}
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => copiarProposta(p)} className={p.destaque ? "tts-btn-primary !text-xs" : "tts-btn !text-xs"}>
+                      <Copy className="size-3" /> WhatsApp
+                    </button>
+                    <button onClick={() => baixarPropostaPDF(p)} className="tts-btn !text-xs">
+                      <FileDown className="size-3" /> PDF
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Resumo comercial pronto para venda */}
+          <div className="tts-card p-5 mt-6 !border-[var(--tts-orange)]">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="size-4 text-[var(--tts-orange)]" />
+              <h3 className="font-display font-bold">Resumo comercial</h3>
+              <span className="tts-badge tts-badge-orange ml-auto">Plano recomendado: {planoRecomendado.nome}</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm font-mono">
+              <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Números ativos</p><p className="font-bold text-base">{quantidadeNumeros}</p></div>
+              <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Capacidade/mês</p><p className="font-bold text-base">{fmtNum(planoRecomendado.capacidadeDisparos)} disparos</p></div>
+              <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Minutos áudio</p><p className="font-bold text-base">{fmtNum(calc.minutosMes, 1)} min</p></div>
+              <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Custo operacional</p><p className="font-bold text-base">{fmtBRL(calc.custoTotalMes)}</p></div>
+              <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Preço final</p><p className="font-bold text-base" style={{ color: "var(--tts-orange)" }}>{fmtBRL(planoRecomendado.preco)}</p></div>
+              <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Lucro estimado</p><p className="font-bold text-base" style={{ color: "var(--tts-green)" }}>{fmtBRL(planoRecomendado.lucroMes)}</p></div>
+              <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Margem</p><p className="font-bold text-base" style={{ color: "var(--tts-green)" }}>{(planoRecomendado.margemReal * 100).toFixed(0)}%</p></div>
+              <div><p className="text-[10px] uppercase text-[var(--tts-muted)]">Setup único</p><p className="font-bold text-base">{fmtBRL(planoRecomendado.setup)}</p></div>
+            </div>
           </div>
         </section>
 
