@@ -4,6 +4,7 @@ import {
   calcMinutos, calcElevenLabs, calcPlayht, calcPolly, calcGpt, calcVenda,
   calcPlanos, calcAnual, calcRampUp, calcEscalaPorNumero, calcSensibilidadePorNumero,
   calcCondicaoCampanha, calcCenariosCampanha,
+  calcFunilRetorno, CENARIOS_FUNIL, type CenarioFunilId, type TaxasFunil,
   GPT_PRICES, fmtBRL, fmtUSD, fmtNum,
   calcularMaoDeObraPorNumero, calcularPercentualMaoDeObra,
   aplicarPisoMargem, MARGEM_MINIMA_OBRIGATORIA, MARGEM_PADRAO,
