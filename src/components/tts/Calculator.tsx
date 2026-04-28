@@ -624,7 +624,7 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
           <SectionTitle icon={<TrendingUp className="size-4" />} title="Resultados" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard label="Custo API / mês" value={fmtBRL(calc.custoApiBrl)} sub={fmtUSD(calc.custoApiUsd)} accent="cyan" />
-            <StatCard label="Mão de obra / mês" value={fmtBRL(calc.custoMoBrl)} sub={`${pctMo}% de ${fmtBRL(moBase)}`} />
+            <StatCard label="Mão de obra / mês" value={fmtBRL(calc.custoMoBrl)} sub={`${quantidadeNumeros} nº × ${fmtBRL(moPlanoSel.precoPorNumero)} (${moPlanoSel.nome})`} />
             <StatCard label="Custo total / mês" value={fmtBRL(calc.custoTotalMes)} accent="orange" large />
             <StatCard label="Custo / disparo" value={totalDisparos > 0 ? fmtBRL(calc.custoTotalMes / totalDisparos) : "R$ 0,00"} sub="custo total ÷ disparos" accent="cyan" />
             <StatCard label="1º mês (com setup)" value={fmtBRL(calc.custoPrimeiroMes)} sub={`+ ${fmtBRL(setup)} setup`} accent="gold" />
