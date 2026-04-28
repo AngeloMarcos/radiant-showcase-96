@@ -2,7 +2,8 @@ import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   calcMinutos, calcElevenLabs, calcPlayht, calcPolly, calcGpt, calcVenda,
-  calcPlanos, calcAnual, calcRampUp, GPT_PRICES, fmtBRL, fmtUSD, fmtNum,
+  calcPlanos, calcAnual, calcRampUp, calcEscalaPorNumero,
+  GPT_PRICES, fmtBRL, fmtUSD, fmtNum,
   calcularMaoDeObraPorNumero, calcularPercentualMaoDeObra,
   MO_PLANOS, MO_PRECO_LEGADO_POR_NUMERO,
   type GptModel, type RampMes, type AudioQuality, type MoPlanoId,
