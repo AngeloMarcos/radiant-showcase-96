@@ -182,8 +182,34 @@ export function Calculator() {
     };
   }, [disparosEfetivos, pctAudioEfetivo, duracaoSeg, quantidadeNumeros, moPlanoId, cambio, setup, ferramentaAudio, qualidade, modeloGpt, tokensPorMsg, infraBrlEfetivo]);
 
-  const planos = useMemo(() => calcPlanos(calc.precoVenda, setup), [calc.precoVenda, setup]);
+  // Planos comerciais (Essencial / Profissional / Premium) — calculados a partir
+  // do CUSTO TOTAL (não do preço sugerido), com margens e capacidades distintas.
+  const planos = useMemo(
+    () => calcPlanos(calc.custoTotalMes, setup, disparosEfetivos),
+    [calc.custoTotalMes, setup, disparosEfetivos]
+  );
+  const planoRecomendado = planos.find(p => p.destaque) ?? planos[1];
   const anual = useMemo(() => calcAnual(calc.custoTotalMes, calc.precoVenda, setup), [calc.custoTotalMes, calc.precoVenda, setup]);
+
+  // ===== Sensibilidade por quantidade de números =====
+  const sensibilidade = useMemo(() => calcSensibilidadePorNumero({
+    quantidadesNumeros: [10, 30, 50, 100],
+    disparosPorNumero,
+    audiosPorNumero,
+    duracaoSeg,
+    tokensPorMsg,
+    modeloGpt,
+    qualidade,
+    custoInfraPorNumero,
+    moPlanoId,
+    cambio,
+    setup,
+    margem: MARGEM_PADRAO,
+  }), [disparosPorNumero, audiosPorNumero, duracaoSeg, tokensPorMsg, modeloGpt, qualidade, custoInfraPorNumero, moPlanoId, cambio, setup]);
+
+  // Margem mínima — alerta visual.
+  const margemAbaixoMinima = calc.margemPct / 100 < MARGEM_MINIMA_OBRIGATORIA;
+  const precoMinimoSeguro = aplicarPisoMargem(calc.custoTotalMes, calc.precoVenda);
 
   // ===== Ramp-up (crescimento gradual) =====
   const [rampAtivo, setRampAtivo] = useState(false);
