@@ -355,7 +355,13 @@ ${plano.features.map(f => `✅ ${f}`).join("\n")}
               </span>
             </div>
             <h1 className="font-display text-3xl md:text-5xl font-bold leading-tight">
-              TTS Cost <span style={{ color: "var(--tts-orange)" }}>Calculator</span>
+              TTS Cost{" "}
+              <span style={{
+                background: "var(--tts-gradient)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}>Calculator</span>
             </h1>
             <p className="text-sm text-[var(--tts-muted)] mt-2 max-w-xl">
               Calcule custos de API, infraestrutura e mão de obra para soluções de disparo
